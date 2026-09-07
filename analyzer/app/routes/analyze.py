@@ -16,7 +16,12 @@ from app.services.quality_score import (
 from app.services.structure_analyzer import (
     analyze_repository_structure,
 )
+from app.services.framework_relationship_analyzer import (
+    detect_framework_relationships,
+)
+
 from app.services.entry_point_analyzer import analyze_entry_points
+from app.services.execution_flow import build_execution_flow
 
 router = APIRouter(prefix="/analyze", tags=["Analysis"])
 
@@ -59,6 +64,18 @@ def analyze(request: AnalyzeRequest):
             results,
             str(Path(request.path).resolve()),
         )
+        
+        execution_flow = build_execution_flow(
+            entry_point_analysis,
+            graph,
+        )
+        
+        framework_relationships = (
+            detect_framework_relationships(
+                results,
+                str(Path(request.path).resolve()),
+            )
+        )
 
         quality_score = calculate_quality_score(
             repository_metrics,
@@ -72,6 +89,8 @@ def analyze(request: AnalyzeRequest):
             "repository_metrics": repository_metrics,
             "repository_structure": repository_structure,
             "entry_point_analysis": entry_point_analysis,
+            "framework_relationships": framework_relationships,
+            "execution_flow": execution_flow,
             "quality_score": quality_score,
             "dependency_graph": graph,
             "graph_analysis": graph_analysis,
