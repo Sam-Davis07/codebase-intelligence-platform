@@ -22,6 +22,9 @@ from app.services.framework_relationship_analyzer import (
 from app.services.architecture_analyzer import (
     analyze_architecture,
 )
+from app.services.architecture_rules import (
+    analyze_architecture_rules,
+)
 
 from app.services.entry_point_analyzer import analyze_entry_points
 from app.services.execution_flow import build_execution_flow
@@ -67,6 +70,10 @@ def analyze(request: AnalyzeRequest):
             results,
             str(Path(request.path).resolve()),
         )
+        architecture_rules = analyze_architecture_rules(
+            results,
+            str(Path(request.path).resolve()),
+        )
         entry_point_analysis = analyze_entry_points(
             results,
             str(Path(request.path).resolve()),
@@ -96,6 +103,7 @@ def analyze(request: AnalyzeRequest):
             "repository_metrics": repository_metrics,
             "repository_structure": repository_structure,
             "architecture_analysis": architecture_analysis,
+            "architecture_rules": architecture_rules,
             "entry_point_analysis": entry_point_analysis,
             "framework_relationships": framework_relationships,
             "execution_flow": execution_flow,
