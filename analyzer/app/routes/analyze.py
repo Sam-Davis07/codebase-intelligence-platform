@@ -16,6 +16,7 @@ from app.services.quality_score import (
 from app.services.structure_analyzer import (
     analyze_repository_structure,
 )
+from app.services.entry_point_analyzer import analyze_entry_points
 
 router = APIRouter(prefix="/analyze", tags=["Analysis"])
 
@@ -54,6 +55,10 @@ def analyze(request: AnalyzeRequest):
             results,
             str(Path(request.path).resolve()),
         )
+        entry_point_analysis = analyze_entry_points(
+            results,
+            str(Path(request.path).resolve()),
+        )
 
         quality_score = calculate_quality_score(
             repository_metrics,
@@ -66,6 +71,7 @@ def analyze(request: AnalyzeRequest):
             "files": results,
             "repository_metrics": repository_metrics,
             "repository_structure": repository_structure,
+            "entry_point_analysis": entry_point_analysis,
             "quality_score": quality_score,
             "dependency_graph": graph,
             "graph_analysis": graph_analysis,
