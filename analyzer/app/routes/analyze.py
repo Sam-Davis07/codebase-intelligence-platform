@@ -7,9 +7,11 @@ from app.services.file_service import get_source_files
 from app.services.code_analyzer import analyze_file
 from app.services.dependency_graph import build_dependency_graph
 from app.services.graph_analyzer import analyze_dependency_graph
+from app.services.quality_metrics import (
+    calculate_repository_metrics,
+)
 
 router = APIRouter(prefix="/analyze", tags=["Analysis"])
-
 
 class AnalyzeRequest(BaseModel):
     path: str
@@ -39,11 +41,12 @@ def analyze(request: AnalyzeRequest):
                 )
         graph = build_dependency_graph(results)
         graph_analysis = analyze_dependency_graph(graph)
-        
+        repository_metrics = calculate_repository_metrics(results)
         return {
             "path": str(Path(request.path).resolve()),
             "file_count": len(files),
             "files": results,
+            "repository_metrics": repository_metrics,
             "dependency_graph": graph,
             "graph_analysis": graph_analysis,
         }
