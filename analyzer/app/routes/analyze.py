@@ -10,6 +10,9 @@ from app.services.graph_analyzer import analyze_dependency_graph
 from app.services.quality_metrics import (
     calculate_repository_metrics,
 )
+from app.services.quality_score import (
+    calculate_quality_score,
+)
 
 router = APIRouter(prefix="/analyze", tags=["Analysis"])
 
@@ -41,12 +44,20 @@ def analyze(request: AnalyzeRequest):
                 )
         graph = build_dependency_graph(results)
         graph_analysis = analyze_dependency_graph(graph)
+
         repository_metrics = calculate_repository_metrics(results)
+
+        quality_score = calculate_quality_score(
+            repository_metrics,
+            graph_analysis,
+        )
+        
         return {
             "path": str(Path(request.path).resolve()),
             "file_count": len(files),
             "files": results,
             "repository_metrics": repository_metrics,
+            "quality_score": quality_score,
             "dependency_graph": graph,
             "graph_analysis": graph_analysis,
         }
