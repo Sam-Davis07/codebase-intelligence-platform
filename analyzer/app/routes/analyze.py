@@ -13,6 +13,9 @@ from app.services.quality_metrics import (
 from app.services.quality_score import (
     calculate_quality_score,
 )
+from app.services.structure_analyzer import (
+    analyze_repository_structure,
+)
 
 router = APIRouter(prefix="/analyze", tags=["Analysis"])
 
@@ -46,6 +49,11 @@ def analyze(request: AnalyzeRequest):
         graph_analysis = analyze_dependency_graph(graph)
 
         repository_metrics = calculate_repository_metrics(results)
+        
+        repository_structure = analyze_repository_structure(
+            results,
+            str(Path(request.path).resolve()),
+        )
 
         quality_score = calculate_quality_score(
             repository_metrics,
@@ -57,6 +65,7 @@ def analyze(request: AnalyzeRequest):
             "file_count": len(files),
             "files": results,
             "repository_metrics": repository_metrics,
+            "repository_structure": repository_structure,
             "quality_score": quality_score,
             "dependency_graph": graph,
             "graph_analysis": graph_analysis,
