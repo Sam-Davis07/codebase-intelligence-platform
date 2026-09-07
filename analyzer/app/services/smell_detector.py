@@ -1,4 +1,5 @@
 LONG_FUNCTION_THRESHOLD = 50
+HIGH_COMPLEXITY_THRESHOLD = 10
 
 
 def detect_long_functions(
@@ -21,6 +22,41 @@ def detect_long_functions(
                     "function": function["name"],
                     "line": function["start_line"],
                     "line_count": line_count,
+                }
+            )
+
+    return smells
+
+
+def detect_high_complexity(
+    functions: list[dict],
+) -> list[dict]:
+    smells = []
+
+    for function in functions:
+        complexity = function["complexity"]
+
+        if complexity > HIGH_COMPLEXITY_THRESHOLD:
+            risk = function["complexity_risk"]
+
+            severity = (
+                "critical"
+                if risk == "critical"
+                else "warning"
+            )
+
+            smells.append(
+                {
+                    "type": "high_complexity",
+                    "severity": severity,
+                    "message": (
+                        f"Function has complexity "
+                        f"of {complexity}"
+                    ),
+                    "function": function["name"],
+                    "line": function["start_line"],
+                    "complexity": complexity,
+                    "complexity_risk": risk,
                 }
             )
 

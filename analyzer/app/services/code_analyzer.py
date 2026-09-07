@@ -13,7 +13,10 @@ from app.services.metrics import (
 )
 
 from app.services.dependency_service import resolve_import
-from app.services.smell_detector import detect_long_functions
+from app.services.smell_detector import (
+    detect_high_complexity,
+    detect_long_functions,
+)
 
 def get_language(file_path: str) -> str | None:
     suffix = Path(file_path).suffix.lower()
@@ -75,6 +78,7 @@ def analyze_file(file_path: str, project_root: str) -> dict:
 
     functions = extract_functions(root_node)
     smells = detect_long_functions(functions)
+    smells.extend(detect_high_complexity(functions))
     imports = extract_imports(root_node)
     dependencies = [
         resolve_import(
