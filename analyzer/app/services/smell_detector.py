@@ -1,6 +1,7 @@
 LONG_FUNCTION_THRESHOLD = 50
 HIGH_COMPLEXITY_THRESHOLD = 10
 TOO_MANY_PARAMETERS_THRESHOLD = 5
+MAX_NESTING_DEPTH = 4
 
 def detect_long_functions(
     functions: list[dict],
@@ -85,5 +86,49 @@ def detect_too_many_parameters(
                     "parameter_count": parameter_count,
                 }
             )
+
+    return smells
+
+def detect_deep_nesting(
+    node,
+    current_depth: int = 0,
+) -> list[dict]:
+    smells = []
+
+    nesting_nodes = {
+        "if_statement",
+        "for_statement",
+        "for_in_statement",
+        "while_statement",
+        "do_statement",
+        "switch_statement",
+        "try_statement",
+        "catch_clause",
+    }
+
+    if node.type in nesting_nodes:
+        current_depth += 1
+
+        if current_depth > MAX_NESTING_DEPTH:
+            smells.append(
+                {
+                    "type": "deep_nesting",
+                    "severity": "warning",
+                    "message": (
+                        f"Code is nested "
+                        f"{current_depth} levels deep"
+                    ),
+                    "line": node.start_point.row + 1,
+                    "nesting_depth": current_depth,
+                }
+            )
+
+    for child in node.children:
+        smells.extend(
+            detect_deep_nesting(
+                child,
+                current_depth,
+            )
+        )
 
     return smells
