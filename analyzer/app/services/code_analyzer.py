@@ -16,6 +16,7 @@ from app.services.dependency_service import resolve_import
 from app.services.smell_detector import (
     detect_high_complexity,
     detect_long_functions,
+    detect_too_many_parameters,
 )
 
 def get_language(file_path: str) -> str | None:
@@ -39,12 +40,19 @@ def extract_functions(node):
         "arrow_function",
     }:
         name = None
+        parameter_count = 0
 
         # Function declarations usually have an identifier child.
         for child in node.children:
             if child.type == "identifier":
                 name = child.text.decode("utf-8")
-                break
+
+            if child.type == "formal_parameters":
+                parameter_count = sum(
+                    1
+                    for parameter in child.named_children
+                    if parameter.type != "comment"
+                )
 
         complexity = calculate_cyclomatic_complexity(node)
 
@@ -54,9 +62,14 @@ def extract_functions(node):
                 "type": node.type,
                 "start_line": node.start_point.row + 1,
                 "end_line": node.end_point.row + 1,
-                "line_count": node.end_point.row - node.start_point.row + 1,
+                "line_count": (
+                    node.end_point.row
+                    - node.start_point.row
+                    + 1
+                ),
                 "complexity": complexity,
                 "complexity_risk": classify_complexity(complexity),
+                "parameter_count": parameter_count,
             }
         )
 
@@ -79,6 +92,7 @@ def analyze_file(file_path: str, project_root: str) -> dict:
     functions = extract_functions(root_node)
     smells = detect_long_functions(functions)
     smells.extend(detect_high_complexity(functions))
+    smells.extend(detect_too_many_parameters(functions))
     imports = extract_imports(root_node)
     dependencies = [
         resolve_import(
