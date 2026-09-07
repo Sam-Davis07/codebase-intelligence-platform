@@ -5,10 +5,13 @@ from app.parsers.typescript_parser import (
     extract_imports,
     parse_file,
 )
+
 from app.services.metrics import (
     calculate_cyclomatic_complexity,
     calculate_file_metrics,
+    classify_complexity,
 )
+
 from app.services.dependency_service import resolve_import
 
 def get_language(file_path: str) -> str | None:
@@ -39,16 +42,19 @@ def extract_functions(node):
                 name = child.text.decode("utf-8")
                 break
 
+        complexity = calculate_cyclomatic_complexity(node)
+
         functions.append(
-                {
-                    "name": name,
-                    "type": node.type,
-                    "start_line": node.start_point.row + 1,
-                    "end_line": node.end_point.row + 1,
-                    "line_count": node.end_point.row - node.start_point.row + 1,
-                    "complexity": calculate_cyclomatic_complexity(node),
-                }
-            )
+            {
+                "name": name,
+                "type": node.type,
+                "start_line": node.start_point.row + 1,
+                "end_line": node.end_point.row + 1,
+                "line_count": node.end_point.row - node.start_point.row + 1,
+                "complexity": complexity,
+                "complexity_risk": classify_complexity(complexity),
+            }
+        )
 
     for child in node.children:
         functions.extend(extract_functions(child))

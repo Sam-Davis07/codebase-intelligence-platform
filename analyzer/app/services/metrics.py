@@ -79,3 +79,15 @@ def calculate_cyclomatic_complexity(node) -> int:
         walk(child)
 
     return complexity
+
+def classify_complexity(complexity: int) -> str:
+    if complexity <= 5:
+        return "low"
+
+    if complexity <= 10:
+        return "moderate"
+
+    if complexity <= 20:
+        return "high"
+
+    return "critical"
