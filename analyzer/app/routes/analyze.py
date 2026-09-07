@@ -1,0 +1,55 @@
+from pathlib import Path
+
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
+
+from app.services.file_service import get_source_files
+from app.services.code_analyzer import analyze_file
+from app.services.dependency_graph import build_dependency_graph
+from app.services.graph_analyzer import analyze_dependency_graph
+
+router = APIRouter(prefix="/analyze", tags=["Analysis"])
+
+
+class AnalyzeRequest(BaseModel):
+    path: str
+
+
+@router.post("")
+def analyze(request: AnalyzeRequest):
+    try:
+        files = get_source_files(request.path)
+
+        results = []
+
+        for file in files:
+            try:
+                result = analyze_file(
+                    str(file),
+                    str(Path(request.path).resolve()),
+                )
+                results.append(result)
+
+            except Exception as error:
+                results.append(
+                    {
+                        "file": str(file),
+                        "error": str(error),
+                    }
+                )
+        graph = build_dependency_graph(results)
+        graph_analysis = analyze_dependency_graph(graph)
+        
+        return {
+            "path": str(Path(request.path).resolve()),
+            "file_count": len(files),
+            "files": results,
+            "dependency_graph": graph,
+            "graph_analysis": graph_analysis,
+        }
+
+    except FileNotFoundError as error:
+        raise HTTPException(status_code=404, detail=str(error))
+
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error))
