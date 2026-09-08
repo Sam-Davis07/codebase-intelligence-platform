@@ -25,6 +25,9 @@ from app.services.architecture_analyzer import (
 from app.services.architecture_rules import (
     analyze_architecture_rules,
 )
+from app.services.cross_layer_graph import (
+    build_cross_layer_graph,
+)
 
 from app.services.entry_point_analyzer import analyze_entry_points
 from app.services.execution_flow import build_execution_flow
@@ -74,6 +77,10 @@ def analyze(request: AnalyzeRequest):
             results,
             str(Path(request.path).resolve()),
         )
+        cross_layer_graph = build_cross_layer_graph(
+            results,
+            str(Path(request.path).resolve()),
+        )
         entry_point_analysis = analyze_entry_points(
             results,
             str(Path(request.path).resolve()),
@@ -104,6 +111,7 @@ def analyze(request: AnalyzeRequest):
             "repository_structure": repository_structure,
             "architecture_analysis": architecture_analysis,
             "architecture_rules": architecture_rules,
+            "cross_layer_graph": cross_layer_graph,
             "entry_point_analysis": entry_point_analysis,
             "framework_relationships": framework_relationships,
             "execution_flow": execution_flow,
