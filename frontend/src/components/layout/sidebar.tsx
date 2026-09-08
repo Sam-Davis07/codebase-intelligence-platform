@@ -13,7 +13,7 @@ import {
   Sparkles,
   Settings,
 } from "lucide-react";
-
+import { ThemeToggle } from "@/components/theme-toggle";
 const navigation = [
   {
     label: "Overview",
@@ -165,14 +165,20 @@ export function Sidebar() {
 
       {/* Footer */}
       <div className="border-t p-4">
-        <p className="px-3 text-xs text-muted-foreground">
-          Codebase Intelligence
-        </p>
+  <div className="flex items-center justify-between">
+    <div>
+      <p className="text-xs font-medium">
+        Codebase IQ
+      </p>
 
-        <p className="px-3 pt-1 text-xs text-muted-foreground">
-          v0.1.0
-        </p>
-      </div>
+      <p className="pt-1 text-xs text-muted-foreground">
+        v0.1.0
+      </p>
+    </div>
+
+    <ThemeToggle />
+  </div>
+</div>
     </aside>
   );
 }
