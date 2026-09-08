@@ -31,10 +31,16 @@ from app.services.cross_layer_graph import (
 from app.services.symbol_reference import (
     build_symbol_references,
 )
+from app.services.reverse_call_graph import (
+    build_reverse_call_graph,
+)
+
 from app.services.symbol_index import build_symbol_index
 
 from app.services.entry_point_analyzer import analyze_entry_points
 from app.services.execution_flow import build_execution_flow
+from app.services.call_graph import build_call_graph
+
 
 router = APIRouter(prefix="/analyze", tags=["Analysis"])
 
@@ -90,6 +96,12 @@ def analyze(request: AnalyzeRequest):
             results,
             symbol_index,
         )
+        call_graph = build_call_graph(
+            symbol_references,
+        )
+        reverse_call_graph = build_reverse_call_graph(
+            call_graph,
+        )
         entry_point_analysis = analyze_entry_points(
             results,
             str(Path(request.path).resolve()),
@@ -130,6 +142,8 @@ def analyze(request: AnalyzeRequest):
             "symbol_index": symbol_index,
             "symbol_index": symbol_index,
             "symbol_references": symbol_references,
+            "call_graph": call_graph,
+            "reverse_call_graph": reverse_call_graph,
         }
 
     except FileNotFoundError as error:
