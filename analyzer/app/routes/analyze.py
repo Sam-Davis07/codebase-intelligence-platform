@@ -29,6 +29,8 @@ from app.services.cross_layer_graph import (
     build_cross_layer_graph,
 )
 
+from app.services.symbol_index import build_symbol_index
+
 from app.services.entry_point_analyzer import analyze_entry_points
 from app.services.execution_flow import build_execution_flow
 
@@ -81,6 +83,7 @@ def analyze(request: AnalyzeRequest):
             results,
             str(Path(request.path).resolve()),
         )
+        symbol_index = build_symbol_index(results)
         entry_point_analysis = analyze_entry_points(
             results,
             str(Path(request.path).resolve()),
@@ -118,6 +121,7 @@ def analyze(request: AnalyzeRequest):
             "quality_score": quality_score,
             "dependency_graph": graph,
             "graph_analysis": graph_analysis,
+            "symbol_index": symbol_index,
         }
 
     except FileNotFoundError as error:

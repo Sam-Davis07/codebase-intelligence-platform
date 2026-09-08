@@ -91,6 +91,7 @@ def analyze_file(file_path: str, project_root: str) -> dict:
     root_node = result["root_node"]
 
     functions = extract_functions(root_node)
+    symbols = extract_symbols(root_node)
     smells = detect_long_functions(functions)
     smells.extend(detect_high_complexity(functions))
     smells.extend(detect_too_many_parameters(functions))
@@ -113,8 +114,139 @@ def analyze_file(file_path: str, project_root: str) -> dict:
         "language": result["language"],
         "metrics": metrics,
         "functions": functions,
+        "symbols": symbols,
         "imports": imports,
         "exports": exports,
         "dependencies": dependencies,
         "smells": smells,
     }
+    
+def extract_symbols(node):
+    symbols = []
+
+    # Function declarations
+    if node.type == "function_declaration":
+        name = None
+
+        for child in node.children:
+            if child.type == "identifier":
+                name = child.text.decode("utf-8")
+                break
+
+        if name:
+            symbols.append(
+                {
+                    "name": name,
+                    "type": "function",
+                    "start_line": node.start_point.row + 1,
+                    "end_line": node.end_point.row + 1,
+                }
+            )
+
+    # Methods inside classes/objects
+    elif node.type == "method_definition":
+        name = None
+
+        for child in node.children:
+            if child.type in {
+                "property_identifier",
+                "private_property_identifier",
+                "identifier",
+            }:
+                name = child.text.decode("utf-8")
+                break
+
+        if name:
+            symbols.append(
+                {
+                    "name": name,
+                    "type": "method",
+                    "start_line": node.start_point.row + 1,
+                    "end_line": node.end_point.row + 1,
+                }
+            )
+
+    # Arrow functions assigned to variables
+    elif node.type == "variable_declarator":
+        value = None
+        name = None
+
+        for child in node.children:
+            if child.type == "identifier":
+                name = child.text.decode("utf-8")
+
+            if child.type == "arrow_function":
+                value = child
+
+        if name and value:
+            symbols.append(
+                {
+                    "name": name,
+                    "type": "arrow_function",
+                    "start_line": node.start_point.row + 1,
+                    "end_line": node.end_point.row + 1,
+                }
+            )
+
+    # Classes
+    elif node.type == "class_declaration":
+        name = None
+
+        for child in node.children:
+            if child.type == "type_identifier":
+                name = child.text.decode("utf-8")
+                break
+
+        if name:
+            symbols.append(
+                {
+                    "name": name,
+                    "type": "class",
+                    "start_line": node.start_point.row + 1,
+                    "end_line": node.end_point.row + 1,
+                }
+            )
+
+    # Interfaces
+    elif node.type == "interface_declaration":
+        name = None
+
+        for child in node.children:
+            if child.type == "type_identifier":
+                name = child.text.decode("utf-8")
+                break
+
+        if name:
+            symbols.append(
+                {
+                    "name": name,
+                    "type": "interface",
+                    "start_line": node.start_point.row + 1,
+                    "end_line": node.end_point.row + 1,
+                }
+            )
+
+    # Type aliases
+    elif node.type == "type_alias_declaration":
+        name = None
+
+        for child in node.children:
+            if child.type == "type_identifier":
+                name = child.text.decode("utf-8")
+                break
+
+        if name:
+            symbols.append(
+                {
+                    "name": name,
+                    "type": "type",
+                    "start_line": node.start_point.row + 1,
+                    "end_line": node.end_point.row + 1,
+                }
+            )
+
+    # Continue recursively through the AST.
+    for child in node.children:
+        symbols.extend(extract_symbols(child))
+
+    return symbols
