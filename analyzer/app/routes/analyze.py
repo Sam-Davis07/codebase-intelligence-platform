@@ -50,7 +50,10 @@ router = APIRouter(prefix="/analyze", tags=["Analysis"])
 class AnalyzeRequest(BaseModel):
     path: str
 
-
+class ImpactRequest(BaseModel):
+    path: str
+    symbol: str
+    
 @router.post("")
 def analyze(request: AnalyzeRequest):
     try:
@@ -154,3 +157,67 @@ def analyze(request: AnalyzeRequest):
 
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error))
+    
+    
+@router.post("/impact")
+def analyze_impact(request: ImpactRequest):
+    try:
+        files = get_source_files(request.path)
+
+        results = []
+
+        for file in files:
+            try:
+                result = analyze_file(
+                    str(file),
+                    str(Path(request.path).resolve()),
+                )
+
+                results.append(result)
+
+            except Exception as error:
+                results.append(
+                    {
+                        "file": str(file),
+                        "error": str(error),
+                    }
+                )
+
+        symbol_index = build_symbol_index(results)
+
+        symbol_references = build_symbol_references(
+            results,
+            symbol_index,
+        )
+
+        call_graph = build_call_graph(
+            symbol_references,
+        )
+
+        reverse_call_graph = build_reverse_call_graph(
+            call_graph,
+        )
+
+        impact = analyze_symbol_impact(
+            request.symbol,
+            reverse_call_graph,
+        )
+
+        return {
+            "path": str(
+                Path(request.path).resolve()
+            ),
+            "impact": impact,
+        }
+
+    except FileNotFoundError as error:
+        raise HTTPException(
+            status_code=404,
+            detail=str(error),
+        )
+
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error),
+        )

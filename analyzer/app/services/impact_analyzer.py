@@ -6,7 +6,7 @@ def analyze_symbol_impact(
     reverse_call_graph: dict,
 ) -> dict:
     """
-    Analyze the symbols that may be affected when a symbol changes.
+    Analyze which symbols may be affected when a symbol changes.
 
     The reverse call graph tells us which symbols depend on
     a given symbol.
@@ -23,19 +23,18 @@ def analyze_symbol_impact(
     adjacency = reverse_call_graph.get("adjacency", {})
 
     affected_symbols = []
-    visited = set()
+    visited = {symbol_id}
 
-    queue = deque()
-
-    queue.append((symbol_id, 0))
-    visited.add(symbol_id)
+    queue = deque(
+        [
+            (symbol_id, 0)
+        ]
+    )
 
     while queue:
         current_symbol, depth = queue.popleft()
 
-        dependents = adjacency.get(current_symbol, [])
-
-        for dependent in dependents:
+        for dependent in adjacency.get(current_symbol, []):
             if dependent in visited:
                 continue
 
@@ -55,8 +54,22 @@ def analyze_symbol_impact(
                 )
             )
 
+    direct_count = sum(
+        1
+        for symbol in affected_symbols
+        if symbol["depth"] == 1
+    )
+
+    indirect_count = sum(
+        1
+        for symbol in affected_symbols
+        if symbol["depth"] > 1
+    )
+
     return {
         "changed_symbol": symbol_id,
         "affected_count": len(affected_symbols),
+        "direct_count": direct_count,
+        "indirect_count": indirect_count,
         "affected_symbols": affected_symbols,
     }
