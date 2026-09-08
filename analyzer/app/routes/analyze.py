@@ -45,6 +45,7 @@ from app.services.entry_point_analyzer import analyze_entry_points
 from app.services.execution_flow import build_execution_flow
 from app.services.call_graph import build_call_graph
 from app.services.route_analyzer import analyze_routes
+from app.services.route_flow import build_route_flows
 
 router = APIRouter(prefix="/analyze", tags=["Analysis"])
 
@@ -115,6 +116,10 @@ def analyze(request: AnalyzeRequest):
         call_graph = build_call_graph(
             symbol_references,
         )
+        route_flows = build_route_flows(
+            route_analysis,
+            call_graph,
+        )
         reverse_call_graph = build_reverse_call_graph(
             call_graph,
         )
@@ -161,6 +166,7 @@ def analyze(request: AnalyzeRequest):
             "symbol_references": symbol_references,
             "call_graph": call_graph,
             "reverse_call_graph": reverse_call_graph,
+            "route_flows": route_flows,
         }
 
     except FileNotFoundError as error:
