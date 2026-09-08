@@ -43,7 +43,7 @@ from app.services.symbol_index import build_symbol_index
 from app.services.entry_point_analyzer import analyze_entry_points
 from app.services.execution_flow import build_execution_flow
 from app.services.call_graph import build_call_graph
-
+from app.services.route_analyzer import analyze_routes
 
 router = APIRouter(prefix="/analyze", tags=["Analysis"])
 
@@ -124,6 +124,10 @@ def analyze(request: AnalyzeRequest):
                 str(Path(request.path).resolve()),
             )
         )
+        route_analysis = analyze_routes(
+            results,
+            str(Path(request.path).resolve()),
+        )
 
         quality_score = calculate_quality_score(
             repository_metrics,
@@ -134,6 +138,7 @@ def analyze(request: AnalyzeRequest):
             "path": str(Path(request.path).resolve()),
             "file_count": len(files),
             "files": results,
+            "route_analysis": route_analysis,
             "repository_metrics": repository_metrics,
             "repository_structure": repository_structure,
             "architecture_analysis": architecture_analysis,
