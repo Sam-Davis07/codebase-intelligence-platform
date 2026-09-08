@@ -34,6 +34,9 @@ from app.services.symbol_reference import (
 from app.services.reverse_call_graph import (
     build_reverse_call_graph,
 )
+from app.services.impact_analyzer import (
+    analyze_symbol_impact,
+)
 
 from app.services.symbol_index import build_symbol_index
 
