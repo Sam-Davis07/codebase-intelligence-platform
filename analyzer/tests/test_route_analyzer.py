@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from app.services.route_analyzer import analyze_routes
-
+from app.services.route_symbol_linker import link_routes_to_symbols
 
 def test_route_analyzer():
     fixture = Path(__file__).parent / "fixtures" / "routes.ts"
@@ -70,3 +70,55 @@ def test_nextjs_routes():
     assert routes[1]["method"] == "POST"
     assert routes[1]["path"] == "/api/users"
     assert routes[1]["handler"] == "POST"
+    
+def test_route_symbol_linking():
+    routes = [
+        {
+            "method": "GET",
+            "path": "/users",
+            "file": "users.ts",
+            "handler": "getUsers",
+            "line": 14,
+            "type": "express",
+        },
+        {
+            "method": "POST",
+            "path": "/users",
+            "file": "users.ts",
+            "handler": "createUser",
+            "line": 15,
+            "type": "express",
+        },
+    ]
+
+    symbol_index = {
+        "getUsers": [
+            {
+                "file": "users.ts",
+                "type": "function",
+                "start_line": 5,
+                "end_line": 7,
+            }
+        ],
+        "createUser": [
+            {
+                "file": "users.ts",
+                "type": "function",
+                "start_line": 9,
+                "end_line": 12,
+            }
+        ],
+    }
+
+    linked_routes = link_routes_to_symbols(
+        routes,
+        symbol_index,
+    )
+
+    assert len(linked_routes) == 2
+
+    assert linked_routes[0]["handler_symbol"]["name"] == "getUsers"
+    assert linked_routes[0]["handler_symbol"]["type"] == "function"
+
+    assert linked_routes[1]["handler_symbol"]["name"] == "createUser"
+    assert linked_routes[1]["handler_symbol"]["start_line"] == 9

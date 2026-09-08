@@ -62,6 +62,13 @@ def detect_routes(
     """
     Detect Express-style routes and Next.js App Router handlers.
     """
+    
+    is_next_route = Path(file_path).name in {
+        "route.ts",
+        "route.tsx",
+        "route.js",
+        "route.jsx",
+    }
 
     routes = []
 
@@ -93,27 +100,31 @@ def detect_routes(
         # export async function GET()
         # export function POST()
 
-        for method in HTTP_METHODS:
-            if (
-                stripped.startswith(f"export async function {method.upper()}")
-                or stripped.startswith(f"export function {method.upper()}")
-            ):
-                routes.append(
-                    {
-                        "method": method.upper(),
-                        "path": infer_next_route_path(
-                            file_path,
-                            project_root,
-                        ),
-                        "file": str(
-                            Path(file_path)
-                            .resolve()
-                        ),
-                        "handler": method.upper(),
-                        "line": index + 1,
-                        "type": "nextjs",
-                    }
-                )
+        if is_next_route:
+            for method in HTTP_METHODS:
+                if (
+                    stripped.startswith(
+                        f"export async function {method.upper()}"
+                    )
+                    or stripped.startswith(
+                        f"export function {method.upper()}"
+                    )
+                ):
+                    routes.append(
+                        {
+                            "method": method.upper(),
+                            "path": infer_next_route_path(
+                                file_path,
+                                project_root,
+                            ),
+                            "file": str(
+                                Path(file_path).resolve()
+                            ),
+                            "handler": method.upper(),
+                            "line": index + 1,
+                            "type": "nextjs",
+                        }
+                    )
 
     return routes
 

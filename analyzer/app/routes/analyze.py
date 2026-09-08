@@ -31,6 +31,7 @@ from app.services.cross_layer_graph import (
 from app.services.symbol_reference import (
     build_symbol_references,
 )
+from app.services.route_symbol_linker import link_routes_to_symbols
 from app.services.reverse_call_graph import (
     build_reverse_call_graph,
 )
@@ -98,6 +99,15 @@ def analyze(request: AnalyzeRequest):
             str(Path(request.path).resolve()),
         )
         symbol_index = build_symbol_index(results)
+        route_analysis = analyze_routes(
+            results,
+            str(Path(request.path).resolve()),
+        )
+
+        route_analysis = link_routes_to_symbols(
+            route_analysis,
+            symbol_index,
+        )
         symbol_references = build_symbol_references(
             results,
             symbol_index,
@@ -123,10 +133,6 @@ def analyze(request: AnalyzeRequest):
                 results,
                 str(Path(request.path).resolve()),
             )
-        )
-        route_analysis = analyze_routes(
-            results,
-            str(Path(request.path).resolve()),
         )
 
         quality_score = calculate_quality_score(
