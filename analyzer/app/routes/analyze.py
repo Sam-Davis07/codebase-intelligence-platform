@@ -28,7 +28,9 @@ from app.services.architecture_rules import (
 from app.services.cross_layer_graph import (
     build_cross_layer_graph,
 )
-
+from app.services.symbol_reference import (
+    build_symbol_references,
+)
 from app.services.symbol_index import build_symbol_index
 
 from app.services.entry_point_analyzer import analyze_entry_points
@@ -84,6 +86,10 @@ def analyze(request: AnalyzeRequest):
             str(Path(request.path).resolve()),
         )
         symbol_index = build_symbol_index(results)
+        symbol_references = build_symbol_references(
+            results,
+            symbol_index,
+        )
         entry_point_analysis = analyze_entry_points(
             results,
             str(Path(request.path).resolve()),
@@ -122,6 +128,8 @@ def analyze(request: AnalyzeRequest):
             "dependency_graph": graph,
             "graph_analysis": graph_analysis,
             "symbol_index": symbol_index,
+            "symbol_index": symbol_index,
+            "symbol_references": symbol_references,
         }
 
     except FileNotFoundError as error:
