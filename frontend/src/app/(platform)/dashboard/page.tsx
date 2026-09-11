@@ -1,29 +1,19 @@
 "use client";
 
+import {
+  FileCode2,
+  FunctionSquare,
+  Gauge,
+  Bug,
+} from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { getAnalysisOverview } from "@/lib/analysis";
 
-const stats = [
-  {
-    key: "files",
-    label: "Files",
-  },
-  {
-    key: "functions",
-    label: "Functions",
-  },
-  {
-    key: "qualityScore",
-    label: "Quality Score",
-  },
-  {
-    key: "codeSmells",
-    label: "Code Smells",
-  },
-] as const;
+import { getAnalysisOverview } from "@/lib/analysis";
+import { MetricCard } from "@/components/dashboard/metric-card";
+import { HealthCard } from "@/components/dashboard/health-card";
 
 export default function DashboardPage() {
-  const { data, isLoading, isError } = useQuery({
+  const { data, isError } = useQuery({
     queryKey: ["analysis", "overview"],
     queryFn: getAnalysisOverview,
   });
@@ -60,21 +50,52 @@ export default function DashboardPage() {
         )}
 
         <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {stats.map((stat) => (
-            <div
-              key={stat.key}
-              className="rounded-xl border bg-card p-5"
-            >
-              <p className="text-sm text-muted-foreground">
-                {stat.label}
-              </p>
+  <MetricCard
+    label="Files"
+    value={metrics?.files ?? 0}
+    icon={FileCode2}
+    description="Source files analyzed"
+    index={0}
+  />
 
-              <p className="mt-2 text-3xl font-semibold">
-                {isLoading ? "—" : metrics?.[stat.key] ?? 0}
-              </p>
-            </div>
-          ))}
-        </section>
+  <MetricCard
+    label="Functions"
+    value={metrics?.functions ?? 0}
+    icon={FunctionSquare}
+    description="Functions and methods detected"
+    index={1}
+  />
+
+  <MetricCard
+    label="Quality Score"
+    value={metrics?.qualityScore ?? 0}
+    icon={Gauge}
+    description="Overall codebase health"
+    index={2}
+  />
+
+  <MetricCard
+    label="Code Smells"
+    value={metrics?.codeSmells ?? 0}
+    icon={Bug}
+    description="Detected maintainability issues"
+    index={3}
+  />
+</section>
+
+<section className="mt-6">
+  <HealthCard
+    overallScore={data?.analysis.quality_score?.overall_score ?? 0}
+    components={
+      data?.analysis.quality_score?.components ?? {
+        complexity: 0,
+        code_smells: 0,
+        maintainability: 0,
+        architecture: 0,
+      }
+    }
+  />
+</section>
 
         <section className="grid gap-6 lg:grid-cols-2">
           <div className="rounded-xl border bg-card p-6">
