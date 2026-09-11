@@ -1,7 +1,7 @@
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 
-export default function DashboardLayout({
+export default function PlatformLayout({
   children,
 }: {
   children: React.ReactNode;
