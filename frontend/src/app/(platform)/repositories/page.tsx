@@ -1,23 +1,46 @@
+"use client";
+
+import { useQuery } from "@tanstack/react-query";
+
 import { PageHeader } from "@/components/layout/page-header";
+import { RepositoryOverview } from "@/components/repositories/repository-overview";
+import { getAnalysisOverview } from "@/lib/analysis";
 
 export default function RepositoriesPage() {
+  const { data, isError } = useQuery({
+    queryKey: ["analysis", "overview"],
+    queryFn: getAnalysisOverview,
+  });
+
+  const metrics = data?.metrics;
+
   return (
-    <main className="p-6 md:p-8">
-      <div className="mx-auto max-w-7xl">
-        <PageHeader
-          eyebrow="Workspace"
-          title="Repositories"
-          description="Manage repositories and analyze their structure, dependencies, and code intelligence."
-        />
+    <div className="space-y-8 p-6">
+      <PageHeader
+        eyebrow="Repository"
+        title="Repositories"
+        description="Explore the repositories connected to your codebase intelligence workspace."
+      />
 
-        <section className="mt-8 rounded-xl border bg-card p-8">
-          <p className="text-sm font-medium">No repository connected</p>
-
-          <p className="mt-2 max-w-lg text-sm text-muted-foreground">
-            Connect a repository to start analyzing its codebase.
+      {isError ? (
+        <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-6">
+          <p className="text-sm font-medium">
+            Unable to load repository analysis.
           </p>
-        </section>
-      </div>
-    </main>
+
+          <p className="mt-1 text-xs text-muted-foreground">
+            Make sure the backend and analyzer are running.
+          </p>
+        </div>
+      ) : (
+        <RepositoryOverview
+          name={data?.repository.name ?? "Local Workspace"}
+          language="TypeScript"
+          files={metrics?.files ?? 0}
+          functions={metrics?.functions ?? 0}
+          qualityScore={metrics?.qualityScore ?? 0}
+        />
+      )}
+    </div>
   );
 }
