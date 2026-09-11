@@ -1,25 +1,37 @@
+"use client";
+
+import { useQuery } from "@tanstack/react-query";
+import { getAnalysisOverview } from "@/lib/analysis";
+
 const stats = [
   {
+    key: "files",
     label: "Files",
-    value: "5",
   },
   {
+    key: "functions",
     label: "Functions",
-    value: "4",
   },
   {
+    key: "qualityScore",
     label: "Quality Score",
-    value: "93",
   },
   {
+    key: "codeSmells",
     label: "Code Smells",
-    value: "1",
   },
-];
+] as const;
 
 export default function DashboardPage() {
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ["analysis", "overview"],
+    queryFn: getAnalysisOverview,
+  });
+
+  const metrics = data?.metrics;
+
   return (
-    <div className="min-h-screen p-8">
+    <main className="min-h-screen bg-background p-8">
       <div className="mx-auto max-w-7xl space-y-8">
         <div>
           <p className="text-sm text-muted-foreground">
@@ -30,15 +42,27 @@ export default function DashboardPage() {
             Codebase Overview
           </h1>
 
-          <p className="text-muted-foreground mt-1">
+          <p className="mt-1 text-muted-foreground">
             Understand the structure and health of your repository.
           </p>
         </div>
 
+        {isError && (
+          <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-4">
+            <p className="text-sm font-medium">
+              Unable to load analysis
+            </p>
+
+            <p className="mt-1 text-sm text-muted-foreground">
+              Make sure the backend and analyzer services are running.
+            </p>
+          </div>
+        )}
+
         <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {stats.map((stat) => (
             <div
-              key={stat.label}
+              key={stat.key}
               className="rounded-xl border bg-card p-5"
             >
               <p className="text-sm text-muted-foreground">
@@ -46,7 +70,7 @@ export default function DashboardPage() {
               </p>
 
               <p className="mt-2 text-3xl font-semibold">
-                {stat.value}
+                {isLoading ? "—" : metrics?.[stat.key] ?? 0}
               </p>
             </div>
           ))}
@@ -75,6 +99,6 @@ export default function DashboardPage() {
           </div>
         </section>
       </div>
-    </div>
+    </main>
   );
 }
