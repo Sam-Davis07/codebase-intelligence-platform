@@ -5,7 +5,7 @@ import morgan from "morgan";
 
 import healthRouter from "./routes/health.routes.js";
 import analysisRouter from "./routes/analysis.routes.js";
-
+import dependencyRoutes from "./routes/dependency.routes.js";
 const app = express();
 
 app.use(helmet());
@@ -29,5 +29,6 @@ app.get("/", (_req, res) => {
 
 app.use("/api/health", healthRouter);
 app.use("/api/analysis", analysisRouter);
+app.use("/api/dependencies", dependencyRoutes);
 
 export default app;

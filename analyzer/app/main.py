@@ -10,7 +10,10 @@ app = FastAPI(
 )
 
 
-app.include_router(analyze_router)
+app.include_router(
+    analyze_router,
+    prefix="",
+)
 
 
 @app.get("/")

@@ -48,7 +48,11 @@ def analyze_dependency_graph(graph: dict) -> dict:
         incoming = fan_in[file_path]
         outgoing = fan_out[file_path]
 
-        file_name = file_path.replace("\\", "/").split("/")[-1]
+        file_name = (
+            file_path
+            .replace("\\", "/")
+            .split("/")[-1]
+        )
 
         is_entry_point = file_name in ENTRY_POINT_NAMES
 
@@ -64,6 +68,7 @@ def analyze_dependency_graph(graph: dict) -> dict:
             "fan_out": outgoing,
             "dependency_count": outgoing,
             "dependent_count": incoming,
+            "total_connections": incoming + outgoing,
             "isolated": is_isolated,
             "entry_point": is_entry_point,
         }
@@ -76,7 +81,8 @@ def analyze_dependency_graph(graph: dict) -> dict:
         if is_entry_point:
             entry_points.append(file_path)
 
-    hotspots = sorted(
+    # Files most depended upon
+    most_depended_on = sorted(
         file_metrics,
         key=lambda item: (
             item["fan_in"],
@@ -85,33 +91,99 @@ def analyze_dependency_graph(graph: dict) -> dict:
         reverse=True,
     )
 
-    hotspots = [
+    most_depended_on = [
         {
             "file": item["file"],
             "fan_in": item["fan_in"],
             "fan_out": item["fan_out"],
+            "total_connections": item["total_connections"],
         }
-        for item in hotspots
+        for item in most_depended_on
         if item["fan_in"] > 0
+    ]
+
+    # Files with the most outgoing dependencies
+    most_dependent_on = sorted(
+        file_metrics,
+        key=lambda item: (
+            item["fan_out"],
+            item["fan_in"],
+        ),
+        reverse=True,
+    )
+
+    most_dependent_on = [
+        {
+            "file": item["file"],
+            "fan_in": item["fan_in"],
+            "fan_out": item["fan_out"],
+            "total_connections": item["total_connections"],
+        }
+        for item in most_dependent_on
+        if item["fan_out"] > 0
     ]
 
     cycles = find_cycles(adjacency)
 
+    external_dependencies = graph.get(
+        "external_dependencies",
+        [],
+    )
+
+    unresolved_dependencies = graph.get(
+        "unresolved_dependencies",
+        [],
+    )
+
+    unique_external_packages = sorted(
+        {
+            dependency["package"]
+            for dependency in external_dependencies
+            if dependency.get("package")
+        }
+    )
+
+    total_files = len(nodes)
+
+    connected_files = sum(
+        1
+        for item in file_metrics
+        if item["fan_in"] > 0 or item["fan_out"] > 0
+    )
+
+    connected_percentage = (
+        round((connected_files / total_files) * 100)
+        if total_files
+        else 0
+    )
+
     summary = {
-        "total_files": len(nodes),
+        "total_files": total_files,
         "internal_dependencies": internal_dependency_count,
+        "external_dependencies": len(external_dependencies),
+        "external_packages": len(unique_external_packages),
+        "unresolved_dependencies": len(
+            unresolved_dependencies
+        ),
         "isolated_files": len(isolated_files),
         "entry_points": len(entry_points),
         "circular_dependencies": len(cycles),
+        "connected_files": connected_files,
+        "connected_percentage": connected_percentage,
     }
 
     return {
         "summary": summary,
         "files": file_metrics,
-        "hotspots": hotspots,
+        "hotspots": most_depended_on,
+        "most_depended_on": most_depended_on,
+        "most_dependent_on": most_dependent_on,
         "isolated_files": isolated_files,
         "entry_points": entry_points,
         "cycles": cycles,
+        "external_dependencies": external_dependencies,
+        "external_packages": unique_external_packages,
+        "unresolved_dependencies": unresolved_dependencies,
     }
 
 
@@ -124,7 +196,10 @@ def find_cycles(adjacency: dict) -> list[list[str]]:
         if node in recursion_stack:
             cycle_start = recursion_stack.index(node)
 
-            cycle = recursion_stack[cycle_start:] + [node]
+            cycle = (
+                recursion_stack[cycle_start:]
+                + [node]
+            )
 
             if cycle not in cycles:
                 cycles.append(cycle)

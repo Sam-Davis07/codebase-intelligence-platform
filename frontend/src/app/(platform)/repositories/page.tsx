@@ -2,12 +2,13 @@
 
 import { useQuery } from "@tanstack/react-query";
 
-import { PageHeader } from "@/components/layout/page-header";
-import { RepositoryOverview } from "@/components/repositories/repository-overview";
 import { getAnalysisOverview } from "@/lib/analysis";
+import { PageHeader } from "@/components/layout/page-header";
+import { PageLoader } from "@/components/ui/page-loader";
+import { RepositoryOverview } from "@/components/repositories/repository-overview";
 
 export default function RepositoriesPage() {
-  const { data, isError } = useQuery({
+  const { data, isError, isLoading } = useQuery({
     queryKey: ["analysis", "overview"],
     queryFn: getAnalysisOverview,
   });
@@ -22,7 +23,9 @@ export default function RepositoriesPage() {
         description="Explore the repositories connected to your codebase intelligence workspace."
       />
 
-      {isError ? (
+      {isLoading ? (
+        <PageLoader message="Loading repository..." />
+      ) : isError ? (
         <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-6">
           <p className="text-sm font-medium">
             Unable to load repository analysis.

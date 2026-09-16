@@ -7,13 +7,23 @@ export default function PlatformLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex min-h-screen">
+    <div className="min-h-screen bg-background">
+      {/* Fixed Sidebar */}
       <Sidebar />
 
-      <div className="min-w-0 flex-1">
-        <Topbar />
+      {/* Main Application Area */}
+      <div className="ml-64 min-h-screen">
+        {/* Fixed Topbar */}
+        <div className="fixed left-64 right-0 top-0 z-40">
+          <Topbar />
+        </div>
 
-        <main>{children}</main>
+        {/* Scrollable Content */}
+        <main className="h-screen overflow-y-auto pt-16">
+          <div className="min-h-full">
+            {children}
+          </div>
+        </main>
       </div>
     </div>
   );

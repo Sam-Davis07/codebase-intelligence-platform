@@ -70,9 +70,109 @@ export interface AnalysisOverview {
   };
 }
 
+export interface DependencyNode {
+  id: string;
+  label: string;
+  type: string;
+}
+
+export interface DependencyEdge {
+  source: string;
+  target: string;
+  type: string;
+}
+
+export interface DependencyFileMetric {
+  file: string;
+  fan_in: number;
+  fan_out: number;
+  dependency_count: number;
+  dependent_count: number;
+  total_connections: number;
+  isolated: boolean;
+  entry_point: boolean;
+}
+
+export interface DependencyAnalysis {
+  summary: {
+    total_files: number;
+    internal_dependencies: number;
+    external_dependencies: number;
+    external_packages: number;
+    unresolved_dependencies: number;
+    isolated_files: number;
+    entry_points: number;
+    circular_dependencies: number;
+    connected_files: number;
+    connected_percentage: number;
+  };
+
+  files: DependencyFileMetric[];
+
+  hotspots: Array<{
+    file: string;
+    fan_in: number;
+    fan_out: number;
+    total_connections: number;
+  }>;
+
+  most_depended_on: Array<{
+    file: string;
+    fan_in: number;
+    fan_out: number;
+    total_connections: number;
+  }>;
+
+  most_dependent_on: Array<{
+    file: string;
+    fan_in: number;
+    fan_out: number;
+    total_connections: number;
+  }>;
+
+  isolated_files: string[];
+
+  entry_points: string[];
+
+  cycles: string[][];
+
+  external_dependencies: Array<{
+    file: string;
+    package: string;
+  }>;
+
+  external_packages: string[];
+
+  unresolved_dependencies: Array<{
+    file: string;
+    source: string;
+  }>;
+}
+
+export interface DependencyOverview {
+  repository: {
+    name: string;
+  };
+
+  graph: {
+    nodes: DependencyNode[];
+    edges: DependencyEdge[];
+  };
+
+  dependency_analysis: DependencyAnalysis;
+}
+
 export async function getAnalysisOverview(): Promise<AnalysisOverview> {
   const response = await api.get<AnalysisOverview>(
     "/analysis/overview"
+  );
+
+  return response.data;
+}
+
+export async function getDependencyOverview(): Promise<DependencyOverview> {
+  const response = await api.get<DependencyOverview>(
+    "/dependencies/overview"
   );
 
   return response.data;

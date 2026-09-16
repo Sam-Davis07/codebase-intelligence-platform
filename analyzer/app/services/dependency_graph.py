@@ -5,6 +5,9 @@ def build_dependency_graph(file_results: list[dict]) -> dict:
     nodes = []
     edges = []
 
+    external_dependencies = []
+    unresolved_dependencies = []
+
     graph = defaultdict(list)
 
     # Only files successfully analyzed become graph nodes
@@ -29,28 +32,48 @@ def build_dependency_graph(file_results: list[dict]) -> dict:
         )
 
         for dependency in file_result.get("dependencies", []):
-            if dependency["type"] != "internal":
-                continue
-
+            dependency_type = dependency.get("type")
             resolved_file = dependency.get("resolved_file")
+            import_source = dependency.get("source")
 
-            if not resolved_file:
-                continue
+            # Internal dependency
+            if dependency_type == "internal":
+                if not resolved_file:
+                    continue
 
-            # Only create an edge if the target is an analyzed file
-            if resolved_file not in valid_files:
-                continue
+                if resolved_file not in valid_files:
+                    continue
 
-            edge = {
-                "source": file_path,
-                "target": resolved_file,
-                "type": "import",
-            }
+                edge = {
+                    "source": file_path,
+                    "target": resolved_file,
+                    "type": "import",
+                }
 
-            edges.append(edge)
-            graph[file_path].append(resolved_file)
+                edges.append(edge)
+                graph[file_path].append(resolved_file)
+
+            # External npm/package dependency
+            elif dependency_type == "external":
+                external_dependencies.append(
+                    {
+                        "file": file_path,
+                        "package": import_source,
+                    }
+                )
+
+            # Import could not be resolved
+            elif dependency_type == "unresolved":
+                unresolved_dependencies.append(
+                    {
+                        "file": file_path,
+                        "source": import_source,
+                    }
+                )
 
     return {
         "nodes": nodes,
         "edges": edges,
+        "external_dependencies": external_dependencies,
+        "unresolved_dependencies": unresolved_dependencies,
     }

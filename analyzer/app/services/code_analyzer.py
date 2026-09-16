@@ -32,50 +32,59 @@ def get_language(file_path: str) -> str | None:
     return None
 
 
-def extract_functions(node):
+def extract_functions(root_node):
     functions = []
+    stack = [root_node]
 
-    if node.type in {
-        "function_declaration",
-        "method_definition",
-        "arrow_function",
-    }:
-        name = None
-        parameter_count = 0
+    while stack:
+        node = stack.pop()
 
-        # Function declarations usually have an identifier child.
-        for child in node.children:
-            if child.type == "identifier":
-                name = child.text.decode("utf-8")
+        if node.type in {
+            "function_declaration",
+            "method_definition",
+            "arrow_function",
+        }:
+            name = None
+            parameter_count = 0
 
-            if child.type == "formal_parameters":
-                parameter_count = sum(
-                    1
-                    for parameter in child.named_children
-                    if parameter.type != "comment"
-                )
+            for child in node.named_children:
+                if child.type in {
+                    "identifier",
+                    "property_identifier",
+                    "private_property_identifier",
+                }:
+                    if name is None:
+                        name = child.text.decode("utf-8")
 
-        complexity = calculate_cyclomatic_complexity(node)
+                elif child.type == "formal_parameters":
+                    parameter_count = sum(
+                        1
+                        for parameter in child.named_children
+                        if parameter.type != "comment"
+                    )
 
-        functions.append(
-            {
-                "name": name,
-                "type": node.type,
-                "start_line": node.start_point.row + 1,
-                "end_line": node.end_point.row + 1,
-                "line_count": (
-                    node.end_point.row
-                    - node.start_point.row
-                    + 1
-                ),
-                "complexity": complexity,
-                "complexity_risk": classify_complexity(complexity),
-                "parameter_count": parameter_count,
-            }
-        )
+            complexity = calculate_cyclomatic_complexity(node)
 
-    for child in node.children:
-        functions.extend(extract_functions(child))
+            functions.append(
+                {
+                    "name": name,
+                    "type": node.type,
+                    "start_line": node.start_point.row + 1,
+                    "end_line": node.end_point.row + 1,
+                    "line_count": (
+                        node.end_point.row
+                        - node.start_point.row
+                        + 1
+                    ),
+                    "complexity": complexity,
+                    "complexity_risk": classify_complexity(
+                        complexity
+                    ),
+                    "parameter_count": parameter_count,
+                }
+            )
+
+        stack.extend(reversed(node.named_children))
 
     return functions
 
@@ -121,132 +130,136 @@ def analyze_file(file_path: str, project_root: str) -> dict:
         "smells": smells,
     }
     
-def extract_symbols(node):
+def extract_symbols(root_node):
     symbols = []
 
-    # Function declarations
-    if node.type == "function_declaration":
-        name = None
+    cursor = root_node.walk()
 
-        for child in node.children:
-            if child.type == "identifier":
-                name = child.text.decode("utf-8")
+    while True:
+        node = cursor.node
+
+        if node.type == "function_declaration":
+            name = None
+
+            for child in node.named_children:
+                if child.type == "identifier":
+                    name = child.text.decode("utf-8")
+                    break
+
+            if name:
+                symbols.append(
+                    {
+                        "name": name,
+                        "type": "function",
+                        "start_line": node.start_point.row + 1,
+                        "end_line": node.end_point.row + 1,
+                    }
+                )
+
+        elif node.type == "method_definition":
+            name = None
+
+            for child in node.named_children:
+                if child.type in {
+                    "property_identifier",
+                    "private_property_identifier",
+                    "identifier",
+                }:
+                    name = child.text.decode("utf-8")
+                    break
+
+            if name:
+                symbols.append(
+                    {
+                        "name": name,
+                        "type": "method",
+                        "start_line": node.start_point.row + 1,
+                        "end_line": node.end_point.row + 1,
+                    }
+                )
+
+        elif node.type == "variable_declarator":
+            name = None
+            value = None
+
+            for child in node.named_children:
+                if child.type == "identifier":
+                    name = child
+
+                elif child.type == "arrow_function":
+                    value = child
+
+            if name and value:
+                symbols.append(
+                    {
+                        "name": name.text.decode("utf-8"),
+                        "type": "arrow_function",
+                        "start_line": node.start_point.row + 1,
+                        "end_line": node.end_point.row + 1,
+                    }
+                )
+
+        elif node.type == "class_declaration":
+            name = None
+
+            for child in node.named_children:
+                if child.type == "type_identifier":
+                    name = child.text.decode("utf-8")
+                    break
+
+            if name:
+                symbols.append(
+                    {
+                        "name": name,
+                        "type": "class",
+                        "start_line": node.start_point.row + 1,
+                        "end_line": node.end_point.row + 1,
+                    }
+                )
+
+        elif node.type == "interface_declaration":
+            name = None
+
+            for child in node.named_children:
+                if child.type == "type_identifier":
+                    name = child.text.decode("utf-8")
+                    break
+
+            if name:
+                symbols.append(
+                    {
+                        "name": name,
+                        "type": "interface",
+                        "start_line": node.start_point.row + 1,
+                        "end_line": node.end_point.row + 1,
+                    }
+                )
+
+        elif node.type == "type_alias_declaration":
+            name = None
+
+            for child in node.named_children:
+                if child.type == "type_identifier":
+                    name = child.text.decode("utf-8")
+                    break
+
+            if name:
+                symbols.append(
+                    {
+                        "name": name,
+                        "type": "type",
+                        "start_line": node.start_point.row + 1,
+                        "end_line": node.end_point.row + 1,
+                    }
+                )
+
+        # TreeCursor traversal
+        if cursor.goto_first_child():
+            continue
+
+        while True:
+            if cursor.goto_next_sibling():
                 break
 
-        if name:
-            symbols.append(
-                {
-                    "name": name,
-                    "type": "function",
-                    "start_line": node.start_point.row + 1,
-                    "end_line": node.end_point.row + 1,
-                }
-            )
-
-    # Methods inside classes/objects
-    elif node.type == "method_definition":
-        name = None
-
-        for child in node.children:
-            if child.type in {
-                "property_identifier",
-                "private_property_identifier",
-                "identifier",
-            }:
-                name = child.text.decode("utf-8")
-                break
-
-        if name:
-            symbols.append(
-                {
-                    "name": name,
-                    "type": "method",
-                    "start_line": node.start_point.row + 1,
-                    "end_line": node.end_point.row + 1,
-                }
-            )
-
-    # Arrow functions assigned to variables
-    elif node.type == "variable_declarator":
-        value = None
-        name = None
-
-        for child in node.children:
-            if child.type == "identifier":
-                name = child.text.decode("utf-8")
-
-            if child.type == "arrow_function":
-                value = child
-
-        if name and value:
-            symbols.append(
-                {
-                    "name": name,
-                    "type": "arrow_function",
-                    "start_line": node.start_point.row + 1,
-                    "end_line": node.end_point.row + 1,
-                }
-            )
-
-    # Classes
-    elif node.type == "class_declaration":
-        name = None
-
-        for child in node.children:
-            if child.type == "type_identifier":
-                name = child.text.decode("utf-8")
-                break
-
-        if name:
-            symbols.append(
-                {
-                    "name": name,
-                    "type": "class",
-                    "start_line": node.start_point.row + 1,
-                    "end_line": node.end_point.row + 1,
-                }
-            )
-
-    # Interfaces
-    elif node.type == "interface_declaration":
-        name = None
-
-        for child in node.children:
-            if child.type == "type_identifier":
-                name = child.text.decode("utf-8")
-                break
-
-        if name:
-            symbols.append(
-                {
-                    "name": name,
-                    "type": "interface",
-                    "start_line": node.start_point.row + 1,
-                    "end_line": node.end_point.row + 1,
-                }
-            )
-
-    # Type aliases
-    elif node.type == "type_alias_declaration":
-        name = None
-
-        for child in node.children:
-            if child.type == "type_identifier":
-                name = child.text.decode("utf-8")
-                break
-
-        if name:
-            symbols.append(
-                {
-                    "name": name,
-                    "type": "type",
-                    "start_line": node.start_point.row + 1,
-                    "end_line": node.end_point.row + 1,
-                }
-            )
-
-    # Continue recursively through the AST.
-    for child in node.children:
-        symbols.extend(extract_symbols(child))
-
-    return symbols
+            if not cursor.goto_parent():
+                return symbols

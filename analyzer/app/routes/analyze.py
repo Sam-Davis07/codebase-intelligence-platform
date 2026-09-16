@@ -47,7 +47,7 @@ from app.services.call_graph import build_call_graph
 from app.services.route_analyzer import analyze_routes
 from app.services.route_flow import build_route_flows
 
-router = APIRouter(prefix="/analyze", tags=["Analysis"])
+router = APIRouter(tags=["Analysis"])
 
 class AnalyzeRequest(BaseModel):
     path: str
@@ -56,7 +56,7 @@ class ImpactRequest(BaseModel):
     path: str
     symbol: str
     
-@router.post("")
+@router.post("/analyze")
 def analyze(request: AnalyzeRequest):
     try:
         files = get_source_files(request.path)
@@ -162,7 +162,6 @@ def analyze(request: AnalyzeRequest):
             "dependency_graph": graph,
             "graph_analysis": graph_analysis,
             "symbol_index": symbol_index,
-            "symbol_index": symbol_index,
             "symbol_references": symbol_references,
             "call_graph": call_graph,
             "reverse_call_graph": reverse_call_graph,
@@ -176,7 +175,7 @@ def analyze(request: AnalyzeRequest):
         raise HTTPException(status_code=400, detail=str(error))
     
     
-@router.post("/impact")
+@router.post("/analyze/impact")
 def analyze_impact(request: ImpactRequest):
     try:
         files = get_source_files(request.path)

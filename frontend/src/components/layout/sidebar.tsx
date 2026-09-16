@@ -103,7 +103,7 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="flex h-screen w-64 shrink-0 flex-col border-r bg-background">
+    <aside className="fixed inset-y-0 left-0 z-50 flex h-screen w-64 shrink-0 flex-col border-r bg-background">
       {/* Brand */}
       <div className="flex h-16 items-center border-b px-5">
         <Link
