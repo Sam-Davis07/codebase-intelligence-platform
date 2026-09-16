@@ -819,9 +819,10 @@ export default function RoutesPage() {
     return (
       <div className="p-6">
         <PageHeader
-          title="Routes"
-          description="Understand your application's HTTP and page routing structure."
-        />
+  eyebrow="ROUTE INTELLIGENCE"
+  title="Routes"
+  description="Understand your application's HTTP and page routing structure."
+/>
 
         <div className="mt-6 flex min-h-[400px] flex-col items-center justify-center rounded-2xl border border-dashed">
           <div className="flex h-12 w-12 items-center justify-center rounded-xl border bg-card">
@@ -859,9 +860,10 @@ export default function RoutesPage() {
     <div className="p-6">
       {/* Page Header */}
       <PageHeader
-        title="Routes"
-        description="Understand your application's HTTP and page routing structure."
-      />
+  eyebrow="ROUTE INTELLIGENCE"
+  title="Routes"
+  description="Understand your application's HTTP and page routing structure."
+/>
 
       {/* -------------------------------------------------------------------- */}
       {/* Analyzer Status                                                       */}
