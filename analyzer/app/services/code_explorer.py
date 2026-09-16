@@ -1,5 +1,9 @@
 from collections import defaultdict
 
+from app.services.file_intelligence import (
+    build_file_intelligence,
+)
+
 
 def build_code_explorer(
     file_results: list[dict],
@@ -15,12 +19,17 @@ def build_code_explorer(
     - imports/dependencies
     - symbol references
     - incoming/outgoing references
+    - file intelligence
     """
 
     files = []
 
     references_by_source = defaultdict(list)
     references_by_target = defaultdict(list)
+
+    # ------------------------------------------------------------------
+    # Index symbol references by source and target file
+    # ------------------------------------------------------------------
 
     for reference in symbol_references:
         source_file = reference.get("source_file")
@@ -36,7 +45,12 @@ def build_code_explorer(
                 reference
             )
 
+    # ------------------------------------------------------------------
+    # Build file-level Code Explorer information
+    # ------------------------------------------------------------------
+
     for file_result in file_results:
+        # Skip files that failed during analysis.
         if "error" in file_result:
             continue
 
@@ -44,6 +58,10 @@ def build_code_explorer(
 
         if not file_path:
             continue
+
+        # --------------------------------------------------------------
+        # Symbols
+        # --------------------------------------------------------------
 
         symbols = []
 
@@ -66,6 +84,10 @@ def build_code_explorer(
                 }
             )
 
+        # --------------------------------------------------------------
+        # Dependencies
+        # --------------------------------------------------------------
+
         dependencies = []
 
         for dependency in file_result.get(
@@ -86,38 +108,73 @@ def build_code_explorer(
                 }
             )
 
+        # --------------------------------------------------------------
+        # File intelligence
+        # --------------------------------------------------------------
+
+        intelligence = build_file_intelligence(
+            file_result
+        )
+
+        # --------------------------------------------------------------
+        # References
+        # --------------------------------------------------------------
+
+        incoming_references = references_by_target.get(
+            file_path,
+            [],
+        )
+
+        outgoing_references = references_by_source.get(
+            file_path,
+            [],
+        )
+
+        # --------------------------------------------------------------
+        # Final file representation
+        # --------------------------------------------------------------
+
         files.append(
             {
                 "file": file_path,
+
                 "symbols": symbols,
+
                 "dependencies": dependencies,
+
                 "incoming_references": len(
-                    references_by_target.get(
-                        file_path,
-                        [],
-                    )
+                    incoming_references
                 ),
+
                 "outgoing_references": len(
-                    references_by_source.get(
-                        file_path,
-                        [],
-                    )
+                    outgoing_references
                 ),
+
+                "intelligence": intelligence,
             }
         )
+
+    # ------------------------------------------------------------------
+    # Repository summary
+    # ------------------------------------------------------------------
+
+    total_symbols = sum(
+        len(file["symbols"])
+        for file in files
+    )
 
     return {
         "summary": {
             "total_files": len(files),
-            "total_symbols": sum(
-                len(file["symbols"])
-                for file in files
-            ),
+            "total_symbols": total_symbols,
             "total_references": len(
                 symbol_references
             ),
         },
+
         "files": files,
+
         "symbol_index": symbol_index,
+
         "references": symbol_references,
     }

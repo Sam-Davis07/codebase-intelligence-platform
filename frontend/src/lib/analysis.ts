@@ -234,14 +234,6 @@ export interface CodeExplorerDependency {
   resolved_file?: string | null;
 }
 
-export interface CodeExplorerFile {
-  file: string;
-  symbols: CodeExplorerSymbol[];
-  dependencies: CodeExplorerDependency[];
-  incoming_references: number;
-  outgoing_references: number;
-}
-
 export interface CodeExplorerReference {
   source_file: string;
   source_symbol: string;
@@ -275,6 +267,27 @@ export interface AnalysisOverview {
     [key: string]: unknown;
   };
 }
+
+export interface CodeExplorerFile {
+  file: string;
+
+  symbols: CodeExplorerSymbol[];
+
+  dependencies: CodeExplorerDependency[];
+
+  incoming_references: number;
+
+  outgoing_references: number;
+
+  intelligence?: {
+    role: string;
+    layer: string;
+    entry_point: boolean;
+    symbol_count: number;
+    dependency_count: number;
+  };
+}
+
 
 export async function getCodeExplorer(): Promise<CodeExplorerAnalysis> {
   const response = await api.get<AnalysisOverview>(

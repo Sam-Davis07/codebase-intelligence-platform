@@ -10,6 +10,9 @@ import {
   GitBranch,
   Import,
   Search,
+  Layers3,
+Route,
+Sparkles,
   X,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
@@ -172,6 +175,139 @@ function Stat({
   );
 }
 
+function FileOverview({
+  file,
+}: {
+  file: CodeExplorerFile;
+}) {
+  const intelligence = file.intelligence;
+
+  const role =
+    intelligence?.role ?? "Source File";
+
+  const layer =
+    intelligence?.layer ?? "Other";
+
+  const isEntryPoint =
+    intelligence?.entry_point ?? false;
+
+  return (
+    <section>
+      <div className="mb-3 flex items-center gap-2">
+        <Sparkles className="h-4 w-4 text-primary" />
+
+        <div>
+          <h3 className="text-sm font-semibold">
+            File Overview
+          </h3>
+
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Understand this file before exploring its relationships.
+          </p>
+        </div>
+      </div>
+
+      <div className="overflow-hidden rounded-xl border bg-background/50">
+        {/* Purpose */}
+        <div className="border-b px-5 py-5">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            What this file does
+          </p>
+
+          <p className="mt-2 text-sm leading-6">
+            {getFileDescription(
+              file,
+              role,
+              layer
+            )}
+          </p>
+        </div>
+
+        {/* Metadata */}
+        <div className="grid gap-px bg-border sm:grid-cols-3">
+          <OverviewItem
+            icon={FileCode2}
+            label="Role"
+            value={role}
+          />
+
+          <OverviewItem
+            icon={Layers3}
+            label="Architecture Layer"
+            value={layer}
+          />
+
+          <OverviewItem
+            icon={Route}
+            label="Entry Point"
+            value={isEntryPoint ? "Yes" : "No"}
+          />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function getFileDescription(
+  file: CodeExplorerFile,
+  role: string,
+  layer: string
+) {
+  const fileName = getFileName(file.file);
+
+  if (role === "Next.js Page") {
+    return `${fileName} is a Next.js page responsible for part of the application's user-facing experience. It belongs to the ${layer.toLowerCase()} layer and serves as an application entry point.`;
+  }
+
+  if (role === "Next.js Layout") {
+    return `${fileName} defines shared application layout structure for the Next.js application. It belongs to the ${layer.toLowerCase()} layer and provides structure around its child routes.`;
+  }
+
+  if (role === "API Route") {
+    return `${fileName} contains API route logic responsible for handling application requests. It belongs to the ${layer.toLowerCase()} layer.`;
+  }
+
+  if (role === "React Component") {
+    return `${fileName} contains reusable React UI logic. It belongs to the ${layer.toLowerCase()} layer and can be reused by other parts of the application.`;
+  }
+
+  if (role === "Utility / Service") {
+    return `${fileName} contains reusable application logic. It belongs to the ${layer.toLowerCase()} layer and supports other parts of the codebase.`;
+  }
+
+  if (file.dependencies.length > 0) {
+    return `${fileName} is a source file with ${file.dependencies.length} detected dependencies and ${file.symbols.length} indexed symbols. It belongs to the ${layer.toLowerCase()} layer.`;
+  }
+
+  return `${fileName} is part of the application's ${layer.toLowerCase()} layer. The analyzer has identified ${file.symbols.length} symbols in this file.`;
+}
+
+function OverviewItem({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: typeof FileCode2;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="bg-card px-4 py-4">
+      <div className="flex items-center gap-2 text-muted-foreground">
+        <Icon className="h-3.5 w-3.5" />
+
+        <span className="text-[10px] font-medium uppercase tracking-wider">
+          {label}
+        </span>
+      </div>
+
+      <p className="mt-2 truncate text-sm font-medium">
+        {value}
+      </p>
+    </div>
+  );
+}
+
 function CodeIntelligence({
   file,
   references,
@@ -239,28 +375,73 @@ function CodeIntelligence({
 
       <div className="space-y-7 p-6">
 
+        <FileOverview file={file} />
+
         {/* Summary */}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <Stat
-            label="Symbols"
-            value={file.symbols.length}
-          />
+  <Stat
+    label="Symbols"
+    value={file.symbols.length}
+  />
 
-          <Stat
-            label="Incoming"
-            value={file.incoming_references}
-          />
+  <Stat
+    label="Dependencies"
+    value={file.dependencies.length}
+  />
 
-          <Stat
-            label="Outgoing"
-            value={file.outgoing_references}
-          />
+  <Stat
+    label="Dependents"
+    value={dependents.length}
+  />
 
-          <Stat
-            label="Dependents"
-            value={dependents.length}
-          />
-        </div>
+  <Stat
+    label="References"
+    value={
+      file.incoming_references +
+      file.outgoing_references
+    }
+  />
+</div>
+
+<section>
+  <div className="mb-3 flex items-center gap-2">
+    <Layers3 className="h-4 w-4 text-primary" />
+
+    <h3 className="text-sm font-semibold">
+      Architecture Context
+    </h3>
+  </div>
+
+  <div className="rounded-xl border bg-background/50 p-5">
+    <div className="flex flex-wrap items-center gap-2">
+      <span className="rounded-lg border bg-card px-3 py-2 text-xs font-medium">
+        {file.intelligence?.layer ?? "Other"}
+      </span>
+
+      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+
+      <span className="rounded-lg border bg-card px-3 py-2 text-xs font-medium">
+        {file.intelligence?.role ?? "Source File"}
+      </span>
+
+      {file.intelligence?.entry_point && (
+        <>
+          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+
+          <span className="rounded-lg bg-primary/10 px-3 py-2 text-xs font-medium text-primary">
+            Entry Point
+          </span>
+        </>
+      )}
+    </div>
+
+    <p className="mt-4 text-xs leading-5 text-muted-foreground">
+      This context is derived from the repository analyzer
+      using the file's location, role, symbols, and detected
+      relationships.
+    </p>
+  </div>
+</section>
 
         {/* Relationship Graph */}
         <section>
