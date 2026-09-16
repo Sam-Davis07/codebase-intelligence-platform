@@ -26,6 +26,7 @@ import {
   getCodeExplorer,
   type CodeExplorerFile,
   type CodeExplorerReference,
+  type CodeExplorerSymbol,
 } from "@/lib/analysis";
 
 function getFileName(file: string) {
@@ -308,6 +309,203 @@ function OverviewItem({
   );
 }
 
+function SymbolIntelligence({
+  symbol,
+  file,
+  references,
+}: {
+  symbol: CodeExplorerSymbol;
+  file: CodeExplorerFile;
+  references: CodeExplorerReference[];
+}) {
+  const incomingReferences = references.filter(
+    (reference) =>
+      reference.target_file === file.file &&
+      reference.target_symbol === symbol.name
+  );
+
+  const outgoingReferences = references.filter(
+    (reference) =>
+      reference.source_file === file.file &&
+      reference.source_symbol === symbol.name
+  );
+
+  return (
+    <section>
+      <div className="mb-3 flex items-center gap-2">
+        <Braces className="h-4 w-4 text-primary" />
+
+        <div>
+          <h3 className="text-sm font-semibold">
+            Symbol Intelligence
+          </h3>
+
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Understand how this symbol participates in the codebase.
+          </p>
+        </div>
+      </div>
+
+      <div className="overflow-hidden rounded-xl border bg-background/50">
+        {/* Symbol Header */}
+        <div className="border-b px-5 py-5">
+          <div className="flex flex-wrap items-center gap-2">
+            <code className="rounded-lg border bg-card px-3 py-2 text-sm font-semibold">
+              {symbol.name}
+            </code>
+
+            {symbol.type && (
+              <span className="rounded-lg bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
+                {symbol.type}
+              </span>
+            )}
+          </div>
+
+          <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-xs text-muted-foreground">
+            <span>
+              Defined in{" "}
+              <span className="font-medium text-foreground">
+                {getFileName(file.file)}
+              </span>
+            </span>
+
+            {symbol.start_line && (
+              <span>
+                Lines{" "}
+                <span className="font-medium text-foreground">
+                  {symbol.start_line}
+                  {symbol.end_line &&
+                    symbol.end_line !== symbol.start_line
+                    ? `–${symbol.end_line}`
+                    : ""}
+                </span>
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Relationship Stats */}
+        <div className="grid grid-cols-2 gap-px bg-border sm:grid-cols-3">
+          <SymbolStat
+            label="Incoming"
+            value={incomingReferences.length}
+          />
+
+          <SymbolStat
+            label="Outgoing"
+            value={outgoingReferences.length}
+          />
+
+          <SymbolStat
+            label="Total References"
+            value={
+              incomingReferences.length +
+              outgoingReferences.length
+            }
+          />
+        </div>
+
+        {/* Used By */}
+        {incomingReferences.length > 0 && (
+          <div className="border-t px-5 py-5">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Used By
+            </p>
+
+            <div className="mt-3 space-y-2">
+              {incomingReferences.map((reference, index) => (
+                <div
+                  key={`${reference.source_file}-${reference.source_symbol}-${index}`}
+                  className="rounded-lg border bg-card px-3 py-3"
+                >
+                  <p className="text-xs font-medium">
+                    {reference.source_symbol}
+                  </p>
+
+                  <p className="mt-1 truncate text-[11px] text-muted-foreground">
+                    {getRelativePath(reference.source_file)}
+                  </p>
+
+                  <p className="mt-1 text-[10px] text-muted-foreground">
+                    Line {reference.line}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Calls / References */}
+        {outgoingReferences.length > 0 && (
+          <div className="border-t px-5 py-5">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              References
+            </p>
+
+            <div className="mt-3 space-y-2">
+              {outgoingReferences.map((reference, index) => (
+                <div
+                  key={`${reference.target_file}-${reference.target_symbol}-${index}`}
+                  className="rounded-lg border bg-card px-3 py-3"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <code className="text-xs font-medium">
+                      {reference.target_symbol}
+                    </code>
+
+                    <span className="rounded-md bg-muted px-2 py-1 text-[10px] text-muted-foreground">
+                      {reference.type}
+                    </span>
+                  </div>
+
+                  <p className="mt-1 truncate text-[11px] text-muted-foreground">
+                    {getRelativePath(reference.target_file)}
+                  </p>
+
+                  <p className="mt-1 text-[10px] text-muted-foreground">
+                    Line {reference.line}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* No Relationships */}
+        {incomingReferences.length === 0 &&
+          outgoingReferences.length === 0 && (
+            <div className="border-t px-5 py-5">
+              <p className="text-xs text-muted-foreground">
+                No cross-file symbol references were detected for
+                this symbol.
+              </p>
+            </div>
+          )}
+      </div>
+    </section>
+  );
+}
+
+function SymbolStat({
+  label,
+  value,
+}: {
+  label: string;
+  value: number;
+}) {
+  return (
+    <div className="bg-card px-4 py-4">
+      <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+        {label}
+      </p>
+
+      <p className="mt-2 text-lg font-semibold">
+        {value}
+      </p>
+    </div>
+  );
+}
+
 function CodeIntelligence({
   file,
   references,
@@ -321,6 +519,9 @@ function CodeIntelligence({
   onClose: () => void;
   onSelectFile: (file: CodeExplorerFile) => void;
 }) {
+
+  const [selectedSymbol, setSelectedSymbol] =
+    useState<CodeExplorerSymbol | null>(null);
   const incoming = references.filter(
     (reference) => reference.target_file === file.file
   );
@@ -485,61 +686,74 @@ function CodeIntelligence({
 
         {/* Symbols */}
         <section>
-          <div className="mb-3 flex items-center gap-2">
-            <Braces className="h-4 w-4 text-primary" />
+  <div className="mb-3 flex items-center gap-2">
+    <Braces className="h-4 w-4 text-primary" />
 
-            <h3 className="text-sm font-semibold">
-              Symbols
-            </h3>
+    <div>
+      <h3 className="text-sm font-semibold">
+        Symbols
+      </h3>
 
-            <span className="rounded-md bg-muted px-2 py-0.5 text-[10px]">
-              {file.symbols.length}
-            </span>
+      <p className="mt-0.5 text-xs text-muted-foreground">
+        Functions, components, and other indexed symbols.
+      </p>
+    </div>
+  </div>
+
+  <div className="space-y-2">
+    {file.symbols.map((symbol) => {
+      const isSelected =
+        selectedSymbol?.name === symbol.name &&
+        selectedSymbol?.start_line === symbol.start_line;
+
+      return (
+        <button
+          key={`${symbol.name}-${symbol.start_line}`}
+          type="button"
+          onClick={() => setSelectedSymbol(symbol)}
+          className={[
+            "w-full rounded-xl border px-4 py-3 text-left transition-colors",
+            isSelected
+              ? "border-primary/50 bg-primary/5"
+              : "bg-background/50 hover:bg-accent",
+          ].join(" ")}
+        >
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <code className="text-xs font-medium">
+                {symbol.name}
+              </code>
+
+              {symbol.start_line && (
+                <p className="mt-1 text-[10px] text-muted-foreground">
+                  Line {symbol.start_line}
+                  {symbol.end_line &&
+                    symbol.end_line !== symbol.start_line
+                    ? `–${symbol.end_line}`
+                    : ""}
+                </p>
+              )}
+            </div>
+
+            {symbol.type && (
+              <span className="shrink-0 rounded-md bg-muted px-2 py-1 text-[10px] text-muted-foreground">
+                {symbol.type}
+              </span>
+            )}
           </div>
+        </button>
+      );
+    })}
+  </div>
+</section>
 
-          {file.symbols.length === 0 ? (
-            <div className="rounded-xl border border-dashed p-5 text-sm text-muted-foreground">
-              No indexed symbols found.
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {file.symbols.map((symbol) => {
-                const Icon = getSymbolIcon(symbol.type);
-
-                return (
-                  <motion.div
-                    key={`${symbol.name}-${symbol.start_line}`}
-                    whileHover={{ x: 2 }}
-                    className="flex items-center gap-3 rounded-xl border bg-background/50 px-4 py-3"
-                  >
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                      <Icon className="h-4 w-4 text-primary" />
-                    </div>
-
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">
-                        {symbol.name}
-                      </p>
-
-                      <p className="mt-0.5 text-xs text-muted-foreground">
-                        {symbol.type ?? "symbol"}
-                      </p>
-                    </div>
-
-                    {symbol.start_line && (
-                      <span className="rounded-md border px-2 py-1 font-mono text-[10px] text-muted-foreground">
-                        L{symbol.start_line}
-                        {symbol.end_line
-                          ? `–${symbol.end_line}`
-                          : ""}
-                      </span>
-                    )}
-                  </motion.div>
-                );
-              })}
-            </div>
-          )}
-        </section>
+{selectedSymbol && (
+  <SymbolIntelligence
+    symbol={selectedSymbol}
+    file={file}
+    references={references}
+  />
+)}
 
         {/* Imports */}
         <section>
@@ -723,9 +937,9 @@ function CodeIntelligence({
 
 export default function CodeExplorerPage() {
   const [search, setSearch] = useState("");
-  const [selectedFile, setSelectedFile] =
-    useState<CodeExplorerFile | null>(null);
-
+  const [selectedFile, setSelectedFile] = useState<CodeExplorerFile | null>(null);
+  const [selectedSymbol, setSelectedSymbol] = useState<CodeExplorerSymbol | null>(null);
+  
   const { data, isLoading, isError, refetch, isFetching } =
     useQuery({
       queryKey: ["code-explorer"],
