@@ -47,6 +47,9 @@ from app.services.call_graph import build_call_graph
 from app.services.route_analyzer import (
     analyze_routes,
 )
+from app.services.code_explorer import (
+    build_code_explorer,
+)
 from app.services.route_flow import build_route_flows
 
 router = APIRouter(tags=["Analysis"])
@@ -172,6 +175,11 @@ def analyze(request: AnalyzeRequest):
             results,
             symbol_index,
         )
+        code_explorer = build_code_explorer(
+            results,
+            symbol_index,
+            symbol_references,
+        )
         call_graph = build_call_graph(
             symbol_references,
         )
@@ -210,6 +218,7 @@ def analyze(request: AnalyzeRequest):
             "files": results,
             "route_analysis": route_analysis,
             "route_summary": route_summary,
+            "code_explorer": code_explorer,
             "repository_metrics": repository_metrics,
             "repository_structure": repository_structure,
             "architecture_analysis": architecture_analysis,

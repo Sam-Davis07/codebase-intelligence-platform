@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useSyncExternalStore } from "react";
 
 import {
   Background,
@@ -334,6 +334,21 @@ export function DependencyGraph({
   edges: graphEdges,
   files,
 }: DependencyGraphProps) {
+      const isDark = useSyncExternalStore(
+    (onStoreChange) => {
+      const observer = new MutationObserver(onStoreChange);
+
+      observer.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ["class"],
+      });
+
+      return () => observer.disconnect();
+    },
+    () =>
+      document.documentElement.classList.contains("dark"),
+    () => false
+  );
   const [selectedFile, setSelectedFile] =
     useState<string | null>(null);
 
@@ -431,8 +446,12 @@ export function DependencyGraph({
 
         style: {
           stroke: isConnected
-            ? "var(--foreground)"
-            : "var(--border)",
+  ? isDark
+    ? "hsl(0 0% 85%)"
+    : "hsl(0 0% 20%)"
+  : isDark
+    ? "hsl(0 0% 32%)"
+    : "hsl(0 0% 78%)",
 
           strokeWidth:
             selectedFile !== null &&
@@ -496,9 +515,10 @@ export function DependencyGraph({
   return (
     <div className="relative h-[680px] overflow-hidden rounded-xl border border-border bg-background">
       <ReactFlow
-        nodes={finalNodes}
-        edges={flowEdges}
-        nodeTypes={nodeTypes}
+  nodes={finalNodes}
+  edges={flowEdges}
+  nodeTypes={nodeTypes}
+  colorMode={isDark ? "dark" : "light"}
         fitView
         fitViewOptions={{
           padding: 0.2,
@@ -515,25 +535,57 @@ export function DependencyGraph({
       >
         {/* Background */}
         <Background
-          gap={20}
-          size={1}
-          color="var(--border)"
-        />
+  gap={20}
+  size={1}
+  color={isDark ? "hsl(0 0% 22%)" : "hsl(0 0% 88%)"}
+/>
 
         {/* Zoom controls */}
         <Controls
-          position="bottom-left"
-          showInteractive={false}
-        />
+  position="bottom-left"
+  showInteractive={false}
+  className="
+    !m-4
+    !overflow-hidden
+    !rounded-xl
+    !border
+    !border-border
+    !bg-card
+    !shadow-xl
+    [&>button]:!border-border
+    [&>button]:!bg-card
+    [&>button]:!text-foreground
+    [&>button:hover]:!bg-accent
+    [&>button:hover]:!text-foreground
+    [&>button>svg]:!text-foreground
+  "
+/>
 
         {/* Minimap */}
         <MiniMap
-          position="bottom-right"
-          pannable
-          zoomable
-          nodeColor="var(--muted-foreground)"
-          maskColor="var(--background)"
-        />
+  position="bottom-right"
+  pannable
+  zoomable
+  nodeColor={
+    isDark
+      ? "hsl(0 0% 65%)"
+      : "hsl(0 0% 35%)"
+  }
+  maskColor={
+    isDark
+      ? "rgba(0, 0, 0, 0.55)"
+      : "rgba(255, 255, 255, 0.65)"
+  }
+  className="
+    !m-4
+    !overflow-hidden
+    !rounded-xl
+    !border
+    !border-border
+    !bg-card
+    !shadow-xl
+  "
+/>
 
         {/* ---------------------------------------------------------------- */}
         {/* Search                                                           */}

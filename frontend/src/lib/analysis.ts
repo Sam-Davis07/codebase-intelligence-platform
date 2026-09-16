@@ -77,23 +77,6 @@ export interface CrossLayerGraph {
   }>;
 }
 
-export interface AnalysisOverview {
-  repository: {
-    name: string;
-  };
-
-  metrics: DashboardMetrics;
-
-  analysis: {
-    quality_score?: QualityScore;
-    architecture_analysis?: ArchitectureAnalysis;
-    architecture_rules?: ArchitectureRules;
-    repository_structure?: RepositoryStructure;
-    entry_point_analysis?: EntryPointAnalysis;
-    cross_layer_graph?: CrossLayerGraph;
-    [key: string]: unknown;
-  };
-}
 
 export interface DependencyNode {
   id: string;
@@ -238,7 +221,77 @@ export interface RouteOverview {
   flows: RouteFlow[];
 }
 
+export interface CodeExplorerSymbol {
+  name: string;
+  type?: string;
+  start_line?: number;
+  end_line?: number;
+}
 
+export interface CodeExplorerDependency {
+  source?: string;
+  type?: string;
+  resolved_file?: string | null;
+}
+
+export interface CodeExplorerFile {
+  file: string;
+  symbols: CodeExplorerSymbol[];
+  dependencies: CodeExplorerDependency[];
+  incoming_references: number;
+  outgoing_references: number;
+}
+
+export interface CodeExplorerReference {
+  source_file: string;
+  source_symbol: string;
+  target_file: string;
+  target_symbol: string;
+  type: string;
+  line: number;
+}
+
+export interface CodeExplorerAnalysis {
+  summary: {
+    total_files: number;
+    total_symbols: number;
+    total_references: number;
+  };
+  files: CodeExplorerFile[];
+  symbol_index: Record<string, CodeExplorerSymbol[]>;
+  references: CodeExplorerReference[];
+}
+
+export interface AnalysisOverview {
+  repository: { name: string };
+  metrics: DashboardMetrics;
+  analysis: {
+    quality_score?: QualityScore;
+    architecture_analysis?: ArchitectureAnalysis;
+    repository_structure?: RepositoryStructure;
+    entry_point_analysis?: EntryPointAnalysis;
+    cross_layer_graph?: CrossLayerGraph;
+    code_explorer?: CodeExplorerAnalysis;
+    [key: string]: unknown;
+  };
+}
+
+export async function getCodeExplorer(): Promise<CodeExplorerAnalysis> {
+  const response = await api.get<AnalysisOverview>(
+    "/analysis/overview"
+  );
+
+  return response.data.analysis.code_explorer ?? {
+    summary: {
+      total_files: 0,
+      total_symbols: 0,
+      total_references: 0,
+    },
+    files: [],
+    symbol_index: {},
+    references: [],
+  };
+}
 export async function getAnalysisOverview(): Promise<AnalysisOverview> {
   const response = await api.get<AnalysisOverview>(
     "/analysis/overview"
