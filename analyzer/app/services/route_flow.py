@@ -3,26 +3,34 @@ def build_route_flows(
     call_graph: dict,
 ) -> list[dict]:
     """
-    Connect API routes to the symbols they directly call.
+    Connect routes to the symbols they directly call.
     """
 
-    adjacency = call_graph.get("adjacency", {})
+    adjacency = call_graph.get(
+        "adjacency",
+        {},
+    )
 
     flows = []
 
     for route in routes:
-        handler_symbol = route.get("handler_symbol")
-
-        if not handler_symbol:
-            continue
+        handler_symbol = route.get(
+            "handler_symbol"
+        )
 
         file_path = route.get("file")
-        handler_name = handler_symbol.get("name")
+        handler_name = (
+            handler_symbol.get("name")
+            if handler_symbol
+            else route.get("handler")
+        )
 
         if not file_path or not handler_name:
             continue
 
-        handler_id = f"{file_path}:{handler_name}"
+        handler_id = (
+            f"{file_path}:{handler_name}"
+        )
 
         called_symbols = adjacency.get(
             handler_id,
@@ -31,10 +39,24 @@ def build_route_flows(
 
         flows.append(
             {
-                "method": route.get("method"),
-                "path": route.get("path"),
+                "method": route.get(
+                    "method"
+                ),
+                "path": route.get(
+                    "path"
+                ),
                 "file": file_path,
                 "handler": handler_name,
+                "type": route.get(
+                    "type"
+                ),
+                "route_type": route.get(
+                    "route_type"
+                ),
+                "dynamic": route.get(
+                    "dynamic",
+                    False,
+                ),
                 "calls": called_symbols,
             }
         )

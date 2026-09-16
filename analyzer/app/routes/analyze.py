@@ -44,7 +44,9 @@ from app.services.symbol_index import build_symbol_index
 from app.services.entry_point_analyzer import analyze_entry_points
 from app.services.execution_flow import build_execution_flow
 from app.services.call_graph import build_call_graph
-from app.services.route_analyzer import analyze_routes
+from app.services.route_analyzer import (
+    analyze_routes,
+)
 from app.services.route_flow import build_route_flows
 
 router = APIRouter(tags=["Analysis"])
@@ -56,6 +58,60 @@ class ImpactRequest(BaseModel):
     path: str
     symbol: str
     
+def summarize_routes(
+    routes: list[dict],
+) -> dict:
+    api_routes = [
+        route
+        for route in routes
+        if route.get("route_type") == "api"
+    ]
+
+    page_routes = [
+        route
+        for route in routes
+        if route.get("route_type") == "page"
+    ]
+
+    dynamic_routes = [
+        route
+        for route in routes
+        if route.get("dynamic")
+    ]
+
+    express_routes = [
+        route
+        for route in routes
+        if route.get("type") == "express"
+    ]
+
+    nextjs_routes = [
+        route
+        for route in routes
+        if route.get("type") == "nextjs"
+    ]
+
+    methods = {}
+
+    for route in routes:
+        method = route.get("method")
+
+        if not method:
+            continue
+
+        methods[method] = (
+            methods.get(method, 0) + 1
+        )
+
+    return {
+        "total_routes": len(routes),
+        "api_routes": len(api_routes),
+        "page_routes": len(page_routes),
+        "dynamic_routes": len(dynamic_routes),
+        "express_routes": len(express_routes),
+        "nextjs_routes": len(nextjs_routes),
+        "methods": methods,
+    }   
 @router.post("/analyze")
 def analyze(request: AnalyzeRequest):
     try:
@@ -109,6 +165,9 @@ def analyze(request: AnalyzeRequest):
             route_analysis,
             symbol_index,
         )
+        route_summary = summarize_routes(
+            route_analysis
+        )
         symbol_references = build_symbol_references(
             results,
             symbol_index,
@@ -150,6 +209,7 @@ def analyze(request: AnalyzeRequest):
             "file_count": len(files),
             "files": results,
             "route_analysis": route_analysis,
+            "route_summary": route_summary,
             "repository_metrics": repository_metrics,
             "repository_structure": repository_structure,
             "architecture_analysis": architecture_analysis,

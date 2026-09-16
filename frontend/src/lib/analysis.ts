@@ -17,6 +17,30 @@ export interface QualityScore {
   };
 }
 
+export interface ArchitectureViolation {
+  source: string;
+  target: string;
+  source_layer: string;
+  target_layer: string;
+  severity: string;
+  type: string;
+  message: string;
+}
+
+export interface ArchitectureDependency {
+  source: string;
+  target: string;
+  source_layer: string;
+  target_layer: string;
+}
+
+export interface ArchitectureRules {
+  total_dependencies_checked: number;
+  valid_dependencies: ArchitectureDependency[];
+  violations: ArchitectureViolation[];
+  total_violations: number;
+}
+
 export interface ArchitectureAnalysis {
   total_layers: number;
   layer_counts: Record<string, number>;
@@ -63,6 +87,7 @@ export interface AnalysisOverview {
   analysis: {
     quality_score?: QualityScore;
     architecture_analysis?: ArchitectureAnalysis;
+    architecture_rules?: ArchitectureRules;
     repository_structure?: RepositoryStructure;
     entry_point_analysis?: EntryPointAnalysis;
     cross_layer_graph?: CrossLayerGraph;
@@ -162,6 +187,58 @@ export interface DependencyOverview {
   dependency_analysis: DependencyAnalysis;
 }
 
+export interface RouteRecord {
+  method: string;
+  path: string;
+  file: string;
+  handler?: string | null;
+  line?: number;
+  type: string;
+  route_type: "api" | "page";
+  dynamic: boolean;
+
+  handler_symbol?: {
+    name: string;
+    type?: string;
+    start_line?: number;
+    end_line?: number;
+  } | null;
+}
+
+export interface RouteSummary {
+  total_routes: number;
+  api_routes: number;
+  page_routes: number;
+  dynamic_routes: number;
+  express_routes: number;
+  nextjs_routes: number;
+  methods: Record<string, number>;
+}
+
+export interface RouteFlow {
+  method: string;
+  path: string;
+  file: string;
+  handler: string;
+  type?: string;
+  route_type?: string;
+  dynamic?: boolean;
+  calls: string[];
+}
+
+export interface RouteOverview {
+  repository: {
+    name: string;
+  };
+
+  summary: RouteSummary;
+
+  routes: RouteRecord[];
+
+  flows: RouteFlow[];
+}
+
+
 export async function getAnalysisOverview(): Promise<AnalysisOverview> {
   const response = await api.get<AnalysisOverview>(
     "/analysis/overview"
@@ -174,6 +251,15 @@ export async function getDependencyOverview(): Promise<DependencyOverview> {
   const response = await api.get<DependencyOverview>(
     "/dependencies/overview"
   );
+
+  return response.data;
+}
+
+export async function getRouteOverview(): Promise<RouteOverview> {
+  const response =
+    await api.get<RouteOverview>(
+      "/routes/overview"
+    );
 
   return response.data;
 }

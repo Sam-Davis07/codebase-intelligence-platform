@@ -63,12 +63,15 @@ export function ArchitectureViolations({
       high: normalizedViolations.filter(
         (item) => item.severity === "high"
       ).length,
+
       medium: normalizedViolations.filter(
         (item) => item.severity === "medium"
       ).length,
+
       low: normalizedViolations.filter(
         (item) => item.severity === "low"
       ).length,
+
       info: normalizedViolations.filter(
         (item) => item.severity === "info"
       ).length,
@@ -374,6 +377,9 @@ export function ArchitectureViolations({
                 const isExpanded =
                   expandedIndex === index;
 
+                const primaryFile =
+                  getPrimaryFile(violation);
+
                 return (
                   <motion.div
                     key={index}
@@ -432,18 +438,12 @@ export function ArchitectureViolations({
                           )}
                         </p>
 
-                        {getPrimaryFile(
-                          violation
-                        ) && (
+                        {primaryFile && (
                           <p
                             className="mt-1 truncate font-mono text-[10px] text-muted-foreground"
-                            title={getPrimaryFile(
-                              violation
-                            )}
+                            title={primaryFile}
                           >
-                            {getPrimaryFile(
-                              violation
-                            )}
+                            {primaryFile}
                           </p>
                         )}
                       </button>
@@ -472,9 +472,7 @@ export function ArchitectureViolations({
                       </button>
                     </div>
 
-                    <AnimatePresence
-                      initial={false}
-                    >
+                    <AnimatePresence initial={false}>
                       {isExpanded && (
                         <motion.div
                           initial={{
@@ -492,9 +490,7 @@ export function ArchitectureViolations({
                           className="overflow-hidden border-t border-border"
                         >
                           <IssueDetails
-                            violation={
-                              violation
-                            }
+                            violation={violation}
                           />
                         </motion.div>
                       )}
@@ -692,7 +688,7 @@ function getIssueMessage(
 
 function getPrimaryFile(
   violation: ArchitectureViolation
-) {
+): string | null {
   if (violation.file) {
     return violation.file;
   }
