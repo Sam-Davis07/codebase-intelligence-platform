@@ -288,6 +288,86 @@ export interface CodeExplorerFile {
   };
 }
 
+export interface ImpactSummary {
+  target_file: string;
+  target_symbol: string | null;
+  direct_dependents: number;
+  transitive_dependents: number;
+  affected_files: number;
+  affected_symbols: number;
+  affected_routes: number;
+  affected_flows: number;
+}
+
+export interface ImpactSymbol {
+  file: string;
+  symbol: string;
+  target_symbol?: string;
+  type?: string;
+  start_line?: number;
+  end_line?: number;
+}
+
+export interface ImpactRoute {
+  method: string;
+  path: string;
+  file: string;
+  handler?: string | null;
+  type?: string;
+  route_type?: string;
+  dynamic?: boolean;
+  impact: "direct" | "transitive";
+}
+
+export interface ImpactFlow {
+  method: string;
+  path: string;
+  file: string;
+  handler: string;
+  calls: string[];
+}
+
+export interface ImpactAnalysis {
+  path: string;
+
+  impact: {
+    symbol: string;
+
+    summary: {
+      direct_dependents: number;
+      transitive_dependents: number;
+      total_affected: number;
+    };
+
+    direct_impact: ImpactSymbol[];
+
+    transitive_impact: ImpactSymbol[];
+
+    affected_symbols: ImpactSymbol[];
+
+    // Keep these optional for the richer
+    // Impact Analyzer response we will add next.
+    affected_files?: string[];
+
+    affected_routes?: ImpactRoute[];
+
+    affected_flows?: ImpactFlow[];
+  };
+}
+
+export async function getImpactAnalysis(
+  symbol: string
+): Promise<ImpactAnalysis> {
+  const response =
+    await api.post<ImpactAnalysis>(
+      "/impact/analyze",
+      {
+        symbol,
+      }
+    );
+
+  return response.data;
+}
 
 export async function getCodeExplorer(): Promise<CodeExplorerAnalysis> {
   const response = await api.get<AnalysisOverview>(

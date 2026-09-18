@@ -7,6 +7,7 @@ import healthRouter from "./routes/health.routes.js";
 import analysisRouter from "./routes/analysis.routes.js";
 import dependencyRoutes from "./routes/dependency.routes.js";
 import routeRoutes from "./routes/route.routes.js";
+import impactRoutes from "./routes/impact.routes.js";
 
 const app = express();
 
@@ -33,5 +34,9 @@ app.use("/api/health", healthRouter);
 app.use("/api/analysis", analysisRouter);
 app.use("/api/dependencies", dependencyRoutes);
 app.use("/api/routes", routeRoutes);
+app.use(
+  "/api/impact",
+  impactRoutes
+);
 
 export default app;

@@ -2,7 +2,6 @@ from fastapi import FastAPI
 
 from app.routes.analyze import router as analyze_router
 
-
 app = FastAPI(
     title="Codebase Intelligence Analyzer",
     description="Static code analysis engine for the Codebase Intelligence Platform",
@@ -14,7 +13,6 @@ app.include_router(
     analyze_router,
     prefix="",
 )
-
 
 @app.get("/")
 def root():

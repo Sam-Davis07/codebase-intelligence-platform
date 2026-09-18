@@ -11,14 +11,16 @@ import {
   Import,
   Search,
   Layers3,
+  AlertTriangle,
 Route,
 Sparkles,
   X,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { CodeContextGraph } from "@/components/code/code-context-graph";
+import { api } from "@/lib/api";
 
 import { PageHeader } from "@/components/layout/page-header";
 import { PageLoader } from "@/components/ui/page-loader";
@@ -28,6 +30,31 @@ import {
   type CodeExplorerReference,
   type CodeExplorerSymbol,
 } from "@/lib/analysis";
+
+type ImpactItem = string | {
+  symbol?: string;
+  name?: string;
+  file?: string;
+  source_file?: string;
+  source_symbol?: string;
+  target_symbol?: string;
+  [key: string]: unknown;
+};
+
+interface ImpactAnalysisResponse {
+  path: string;
+  impact: {
+    symbol: string;
+    summary: {
+      direct_dependents: number;
+      transitive_dependents: number;
+      total_affected: number;
+    };
+    direct_impact: ImpactItem[];
+    transitive_impact: ImpactItem[];
+    affected_symbols: ImpactItem[];
+  };
+}
 
 function getFileName(file: string) {
   return file.replaceAll("\\", "/").split("/").pop() ?? file;
@@ -313,10 +340,14 @@ function SymbolIntelligence({
   symbol,
   file,
   references,
+  onAnalyzeImpact,
+  impactLoading,
 }: {
   symbol: CodeExplorerSymbol;
   file: CodeExplorerFile;
   references: CodeExplorerReference[];
+  onAnalyzeImpact: () => void;
+  impactLoading: boolean;
 }) {
   const incomingReferences = references.filter(
     (reference) =>
@@ -382,6 +413,18 @@ function SymbolIntelligence({
               </span>
             )}
           </div>
+        </div>
+
+        <div className="mt-5">
+          <button
+            type="button"
+            onClick={onAnalyzeImpact}
+            disabled={impactLoading}
+            className="inline-flex items-center gap-2 rounded-lg bg-primary px-3.5 py-2 text-xs font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <AlertTriangle className="h-3.5 w-3.5" />
+            {impactLoading ? "Analyzing..." : "Analyze Impact"}
+          </button>
         </div>
 
         {/* Relationship Stats */}
@@ -506,6 +549,183 @@ function SymbolStat({
   );
 }
 
+function formatImpactItem(item: ImpactItem) {
+  if (typeof item === "string") {
+    return item;
+  }
+
+  return String(
+    item.symbol ??
+      item.name ??
+      item.target_symbol ??
+      item.source_symbol ??
+      item.file ??
+      item.source_file ??
+      "Unknown symbol"
+  );
+}
+
+function ImpactPanel({
+  analysis,
+  loading,
+  error,
+}: {
+  analysis: ImpactAnalysisResponse | null;
+  loading: boolean;
+  error: string | null;
+}) {
+  if (!analysis && !loading && !error) {
+    return null;
+  }
+
+  if (loading) {
+    return (
+      <section>
+        <div className="mb-3 flex items-center gap-2">
+          <AlertTriangle className="h-4 w-4 text-primary" />
+          <div>
+            <h3 className="text-sm font-semibold">Impact Analysis</h3>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Tracing callers and downstream dependencies.
+            </p>
+          </div>
+        </div>
+
+        <div className="rounded-xl border bg-background/50 p-5">
+          <div className="flex items-center gap-3">
+            <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-primary" />
+            <p className="text-sm text-muted-foreground">
+              Running impact analysis...
+            </p>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (error) {
+    return (
+      <section>
+        <div className="mb-3 flex items-center gap-2">
+          <AlertTriangle className="h-4 w-4 text-destructive" />
+          <h3 className="text-sm font-semibold">Impact Analysis</h3>
+        </div>
+
+        <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-5">
+          <p className="text-sm font-medium">Unable to analyze impact.</p>
+          <p className="mt-1 text-xs text-muted-foreground">{error}</p>
+        </div>
+      </section>
+    );
+  }
+
+  if (!analysis) {
+    return null;
+  }
+
+  const impact = analysis.impact;
+
+  const renderItems = (
+    title: string,
+    items: ImpactItem[],
+    emptyMessage: string
+  ) => (
+    <div className="border-t px-5 py-5 first:border-t-0">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+          {title}
+        </p>
+        <span className="rounded-md bg-muted px-2 py-0.5 text-[10px]">
+          {items.length}
+        </span>
+      </div>
+
+      {items.length === 0 ? (
+        <p className="mt-3 text-xs text-muted-foreground">{emptyMessage}</p>
+      ) : (
+        <div className="mt-3 space-y-2">
+          {items.map((item, index) => (
+            <div
+              key={`${formatImpactItem(item)}-${index}`}
+              className="rounded-lg border bg-card px-3 py-3"
+            >
+              <code className="text-xs font-medium">
+                {formatImpactItem(item)}
+              </code>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  return (
+    <section>
+      <div className="mb-3 flex items-center gap-2">
+        <AlertTriangle className="h-4 w-4 text-primary" />
+        <div>
+          <h3 className="text-sm font-semibold">Impact Analysis</h3>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Understand what may be affected if this symbol changes.
+          </p>
+        </div>
+      </div>
+
+      <div className="overflow-hidden rounded-xl border bg-background/50">
+        <div className="border-b px-5 py-5">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Change Target
+          </p>
+          <code className="mt-2 block text-sm font-semibold">
+            {impact.symbol}
+          </code>
+        </div>
+
+        <div className="grid grid-cols-3 gap-px bg-border">
+          <div className="bg-card px-4 py-4">
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              Direct
+            </p>
+            <p className="mt-2 text-lg font-semibold">
+              {impact.summary.direct_dependents}
+            </p>
+          </div>
+
+          <div className="bg-card px-4 py-4">
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              Transitive
+            </p>
+            <p className="mt-2 text-lg font-semibold">
+              {impact.summary.transitive_dependents}
+            </p>
+          </div>
+
+          <div className="bg-card px-4 py-4">
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              Total
+            </p>
+            <p className="mt-2 text-lg font-semibold">
+              {impact.summary.total_affected}
+            </p>
+          </div>
+        </div>
+
+        {renderItems(
+          "Direct Impact",
+          impact.direct_impact,
+          "No direct dependents detected for this symbol."
+        )}
+
+        {renderItems(
+          "Transitive Impact",
+          impact.transitive_impact,
+          "No transitive dependents detected."
+        )}
+      </div>
+    </section>
+  );
+}
+
 function CodeIntelligence({
   file,
   references,
@@ -522,6 +742,57 @@ function CodeIntelligence({
 
   const [selectedSymbol, setSelectedSymbol] =
     useState<CodeExplorerSymbol | null>(null);
+  const [impactAnalysis, setImpactAnalysis] =
+    useState<ImpactAnalysisResponse | null>(null);
+  const [impactLoading, setImpactLoading] =
+    useState(false);
+  const [impactError, setImpactError] =
+    useState<string | null>(null);
+
+  useEffect(() => {
+    setSelectedSymbol(null);
+    setImpactAnalysis(null);
+    setImpactError(null);
+    setImpactLoading(false);
+  }, [file.file]);
+
+  const handleAnalyzeImpact = async () => {
+    if (!selectedSymbol) {
+      return;
+    }
+
+    try {
+      setImpactLoading(true);
+      setImpactError(null);
+
+      const normalizedPath = file.file.replaceAll("\\", "/");
+      const marker = "/frontend/";
+      const markerIndex = normalizedPath.toLowerCase().indexOf(marker);
+      const repositoryPath =
+        markerIndex >= 0
+          ? normalizedPath.slice(0, markerIndex + "/frontend".length)
+          : undefined;
+
+      const response = await api.post<ImpactAnalysisResponse>(
+        "/impact/analyze",
+        {
+          ...(repositoryPath ? { path: repositoryPath } : {}),
+          symbol: selectedSymbol.name,
+        }
+      );
+
+      setImpactAnalysis(response.data);
+    } catch (error) {
+      console.error("Failed to analyze symbol impact:", error);
+      setImpactAnalysis(null);
+      setImpactError(
+        "The impact analyzer could not complete the request. Check that the backend and analyzer are running."
+      );
+    } finally {
+      setImpactLoading(false);
+    }
+  };
+
   const incoming = references.filter(
     (reference) => reference.target_file === file.file
   );
@@ -710,7 +981,11 @@ function CodeIntelligence({
         <button
           key={`${symbol.name}-${symbol.start_line}`}
           type="button"
-          onClick={() => setSelectedSymbol(symbol)}
+          onClick={() => {
+            setSelectedSymbol(symbol);
+            setImpactAnalysis(null);
+            setImpactError(null);
+          }}
           className={[
             "w-full rounded-xl border px-4 py-3 text-left transition-colors",
             isSelected
@@ -752,6 +1027,16 @@ function CodeIntelligence({
     symbol={selectedSymbol}
     file={file}
     references={references}
+    onAnalyzeImpact={handleAnalyzeImpact}
+    impactLoading={impactLoading}
+  />
+)}
+
+{selectedSymbol && (impactAnalysis || impactLoading || impactError) && (
+  <ImpactPanel
+    analysis={impactAnalysis}
+    loading={impactLoading}
+    error={impactError}
   />
 )}
 
@@ -937,8 +1222,8 @@ function CodeIntelligence({
 
 export default function CodeExplorerPage() {
   const [search, setSearch] = useState("");
-  const [selectedFile, setSelectedFile] = useState<CodeExplorerFile | null>(null);
-  const [selectedSymbol, setSelectedSymbol] = useState<CodeExplorerSymbol | null>(null);
+  const [selectedFile, setSelectedFile] =
+    useState<CodeExplorerFile | null>(null);
   
   const { data, isLoading, isError, refetch, isFetching } =
     useQuery({
@@ -1010,6 +1295,10 @@ export default function CodeExplorerPage() {
       </div>
     );
   }
+
+  const handleSelectFile = (nextFile: CodeExplorerFile) => {
+  setSelectedFile(nextFile);
+};
 
   return (
     <div className="p-8">
@@ -1096,7 +1385,7 @@ export default function CodeExplorerPage() {
               <FileExplorer
                 files={filteredFiles}
                 selectedFile={effectiveSelectedFile}
-                onSelect={setSelectedFile}
+                onSelect={handleSelectFile}
               />
             )}
           </div>
@@ -1111,7 +1400,7 @@ export default function CodeExplorerPage() {
   references={data.references}
   files={files}
   onClose={() => setSelectedFile(null)}
-  onSelectFile={setSelectedFile}
+  onSelectFile={handleSelectFile}
 />
             ) : (
               <motion.div
